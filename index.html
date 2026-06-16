@@ -1,82 +1,35 @@
-<!DOCTYPE html>
-<html lang="nl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lesrooster - Systeem Update</title>
-    <style>
-        body { font-family: sans-serif; background: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .container { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; max-width: 500px; }
-        .badge { background: #dbeafe; color: #1e40af; padding: 6px 12px; border-radius: 99px; font-weight: 600; display: inline-block; margin-bottom: 20px; }
-        button { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-top: 20px; }
-        #chatModal { margin-top: 20px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; display: none; }
-        input { padding: 8px; width: 80%; margin-bottom: 10px; }
-    </style>
-</head>
-<body>
-
-    <div class="container">
-        <span class="badge">Systeem Update</span>
-        <h1>Lesrooster wordt vernieuwd</h1>
-        <p>De Lesrooster app is tijdelijk niet beschikbaar vanwege de overstap naar het nieuwe NCS School portaal.</p>
-        
-        <button id="semKnop" onclick="document.getElementById('chatModal').style.display='block'">Alleen voor Sem</button>
-
-        <div id="chatModal">
-            <p>Wat is je favoriete vervoermiddel?</p>
-            <input type="text" id="vervoerInput" placeholder="Typ hier...">
-            <button onclick="verstuurAntwoord()">Verstuur</button>
-            <div id="chatBericht" style="margin-top: 15px; font-weight: bold;"></div>
-        </div>
+<div id="chatBox" style="height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;">
     </div>
+<input type="text" id="msgInput" placeholder="Typ je bericht...">
+<button onclick="verstuurBericht()">Verzenden</button>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+<script type="module">
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+    
+    const db = getFirestore(app);
+    const chatBox = document.getElementById('chatBox');
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBKfkKcLxyLIA_EbFZZlGEWsJ6DtdrCkPE",
-            authDomain: "lesrooster-ncs.firebaseapp.com",
-            projectId: "lesrooster-ncs",
-            storageBucket: "lesrooster-ncs.firebasestorage.app",
-            messagingSenderId: "505492622384",
-            appId: "1:505492622384:web:3e944061525c767f35b1f5"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // Geheime toegang voor Naaim
-        window.addEventListener("keydown", (e) => {
-            if (e.altKey && e.key === "a") {
-                const pin = prompt("Voer de pincode in:");
-                if (pin === "202313") {
-                    alert("Welkom Naaim, je hebt toegang tot het admin gedeelte.");
-                }
-            }
+    // 1. Live berichten ophalen (Realtime)
+    const q = query(collection(db, "chats"), orderBy("timestamp", "asc"));
+    onSnapshot(q, (snapshot) => {
+        chatBox.innerHTML = ""; // Wis huidige lijst
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            chatBox.innerHTML += `<p><b>${data.van}:</b> ${data.bericht}</p>`;
         });
+        chatBox.scrollTop = chatBox.scrollHeight; // Scroll naar beneden
+    });
 
-        // Chat logica
-        window.verstuurAntwoord = async () => {
-            const input = document.getElementById('vervoerInput').value;
-            if (input.toLowerCase().includes("bus")) {
-                const tekst = "Hallo Sem, ik ben Naaim!";
-                document.getElementById('chatBericht').innerText = tekst;
-                
-                try {
-                    await addDoc(collection(db, "chats"), {
-                        van: "Naaim",
-                        aan: "Sem",
-                        bericht: tekst,
-                        timestamp: new Date()
-                    });
-                } catch (e) {
-                    console.error("Fout bij opslaan: ", e);
-                }
-            } else {
-                alert("Probeer het nog eens!");
-            }
-        };
-    </script>
-</body>
-</html>
+    // 2. Berichten versturen
+    window.verstuurBericht = async () => {
+        const tekst = document.getElementById('msgInput').value;
+        const wieBenIk = document.body.dataset.role || "Gebruiker"; // 'Admin' na Alt+A invoer
+        
+        await addDoc(collection(db, "chats"), {
+            bericht: tekst,
+            van: wieBenIk,
+            timestamp: serverTimestamp()
+        });
+        document.getElementById('msgInput').value = "";
+    };
+</script>
