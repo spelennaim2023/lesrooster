@@ -1,67 +1,2093 @@
 <!DOCTYPE html>
-<html>
+<html lang="nl" class="scroll-smooth">
 <head>
-    <style>
-        body { margin: 0; background: #222; color: #fff; font-family: sans-serif; }
-        #scherm { height: 80vh; overflow-y: scroll; padding: 20px; }
-        .msg { padding: 10px; margin: 5px; border-radius: 10px; max-width: 70%; }
-        .admin { background: blue; margin-left: auto; text-align: right; }
-        .user { background: #444; }
-        #input-veld { position: fixed; bottom: 0; width: 100%; display: flex; }
-        input { flex: 1; padding: 20px; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NCS Premium Portaal</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        themeBg: 'var(--bg-color)',
+                        themeCard: 'var(--card-color)',
+                        themeBorder: 'var(--border-color)',
+                        themeText: 'var(--text-primary)',
+                        themeTextMuted: 'var(--text-muted)',
+                        themeAccent: 'var(--accent-color)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style id="theme-variable-styles">
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        :root {
+            /* Fallback variables */
+            --bg-color: #05050a;
+            --bg-image: radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.15) 0px, transparent 40%);
+            --card-color: rgba(15, 15, 25, 0.7);
+            --border-color: rgba(255, 255, 255, 0.06);
+            --text-primary: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent-color: #0ea5e9;
+            --accent-rgb: 14, 165, 233;
+            --card-radius: 24px;
+            --card-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        * {
+            font-family: var(--font-main);
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease, border-radius 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: var(--bg-image);
+            background-attachment: fixed;
+            color: var(--text-primary);
+        }
+
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(120, 120, 120, 0.02);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(120, 120, 120, 0.15);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(var(--accent-rgb), 0.5);
+        }
+
+        .glass-panel {
+            background: var(--card-color);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--card-radius);
+            box-shadow: var(--card-shadow);
+        }
+
+        /* Customizable interactive cursor styles */
+        @media (pointer: fine) {
+            .custom-cursor {
+                width: 8px;
+                height: 8px;
+                background-color: var(--accent-color);
+                border-radius: 50%;
+                position: fixed;
+                pointer-events: none;
+                z-index: 9999;
+                transform: translate(-50%, -50%);
+                transition: width 0.15s, height 0.15s;
+            }
+            .cursor-follower {
+                width: 32px;
+                height: 32px;
+                border: 1.5px solid var(--accent-color);
+                border-radius: 50%;
+                position: fixed;
+                pointer-events: none;
+                z-index: 9998;
+                transform: translate(-50%, -50%);
+                transition: transform 0.08s ease-out, width 0.15s, height 0.15s, background-color 0.15s;
+            }
+            html.custom-cursor-active, html.custom-cursor-active * {
+                cursor: none !important;
+            }
+        }
+
+        /* Card flip physics for flashcards */
+        .perspective {
+            perspective: 1000px;
+        }
+        .preserve-3d {
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
     </style>
 </head>
-<body>
+<body class="min-h-screen flex flex-col md:flex-row overflow-x-hidden">
 
-<div id="scherm"></div>
-<div id="input-veld">
-    <input id="input" placeholder="Typ bericht...">
-    <button onclick="stuur()">VERSTUUR</button>
-</div>
+    <div class="custom-cursor hidden md:block" id="cursor"></div>
+    <div class="cursor-follower hidden md:block" id="follower"></div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+    <!-- MOBILE HEADER -->
+    <header class="md:hidden glass-panel m-4 p-4 flex justify-between items-center z-50 sticky top-0 bg-opacity-90">
+        <div class="flex items-center gap-2">
+            <span class="text-lg font-black tracking-wider text-themeAccent" id="mobile-brand">⚡ NCS PORTAAL</span>
+        </div>
+        <button id="menu-toggle" class="p-2 text-themeTextMuted hover:text-themeAccent">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
+    </header>
 
-    const app = initializeApp({
-        apiKey: "AIzaSyBKfkKcLxyLIA_EbFZZlGEWsJ6DtdrCkPE",
-        projectId: "lesrooster-ncs",
-        authDomain: "lesrooster-ncs.firebaseapp.com",
-        storageBucket: "lesrooster-ncs.firebasestorage.app",
-        messagingSenderId: "505492622384",
-        appId: "1:505492622384:web:3e944061525c767f35b1f5"
-    });
+    <!-- COLLAPSIBLE SIDEBAR NAVIGATION -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:translate-x-0 md:relative md:flex flex-col w-64 glass-panel m-4 h-[calc(100vh-2rem)] p-5 transition-all duration-300 ease-in-out z-40 bg-opacity-95">
+        <div class="flex items-center justify-between mb-8 px-2">
+            <div class="flex items-center gap-2.5 overflow-hidden whitespace-nowrap" id="sidebar-logo-container">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-tr from-sky-500 to-indigo-600 text-white font-extrabold text-base shadow-md shrink-0">N</div>
+                <span class="text-sm font-black tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-indigo-400 sidebar-label">NCS PORTAAL</span>
+            </div>
+            <!-- Collapse toggle button (desktop only) -->
+            <button onclick="toggleSidebarCollapse()" class="hidden md:flex p-1.5 rounded-lg hover:bg-white/5 text-themeTextMuted hover:text-themeAccent transition-all" title="Klap menu in/uit" id="sidebar-collapse-btn">
+                <svg class="w-4 h-4 transform transition-transform" id="collapse-arrow-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path></svg>
+            </button>
+        </div>
 
-    const db = getFirestore(app);
-    let admin = false;
+        <nav class="flex-1 space-y-1.5">
+            <a href="#" onclick="switchTab('dashboard')" class="nav-btn flex items-center gap-3 px-3.5 py-3 rounded-xl font-semibold text-themeAccent bg-sky-500/10" id="tab-dashboard" title="Overzicht">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                <span class="sidebar-label whitespace-nowrap text-sm">Overzicht</span>
+            </a>
+            <a href="#" onclick="switchTab('schedule')" class="nav-btn flex items-center gap-3 px-3.5 py-3 rounded-xl font-semibold text-themeTextMuted hover:text-themeText hover:bg-white/5 transition-all" id="tab-schedule" title="Weekrooster">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <span class="sidebar-label whitespace-nowrap text-sm">Weekrooster</span>
+            </a>
+            <a href="#" onclick="switchTab('homework')" class="nav-btn flex items-center gap-3 px-3.5 py-3 rounded-xl font-semibold text-themeTextMuted hover:text-themeText hover:bg-white/5 transition-all" id="tab-homework" title="Huiswerk & Taken">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16.01h.01"></path></svg>
+                <span class="sidebar-label whitespace-nowrap text-sm">Huiswerk & Taken</span>
+            </a>
+            <a href="#" onclick="switchTab('grades')" class="nav-btn flex items-center gap-3 px-3.5 py-3 rounded-xl font-semibold text-themeTextMuted hover:text-themeText hover:bg-white/5 transition-all" id="tab-grades" title="Cijfers & Prognose">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z"></path></svg>
+                <span class="sidebar-label whitespace-nowrap text-sm">Cijfers & Tools</span>
+            </a>
+            <a href="#" onclick="switchTab('flashcards')" class="nav-btn flex items-center gap-3 px-3.5 py-3 rounded-xl font-semibold text-themeTextMuted hover:text-themeText hover:bg-white/5 transition-all" id="tab-flashcards" title="Flitskaarten">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                <span class="sidebar-label whitespace-nowrap text-sm">Flitskaarten</span>
+            </a>
+            <a href="#" onclick="switchTab('notes')" class="nav-btn flex items-center gap-3 px-3.5 py-3 rounded-xl font-semibold text-themeTextMuted hover:text-themeText hover:bg-white/5 transition-all" id="tab-notes" title="Kladblok">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                <span class="sidebar-label whitespace-nowrap text-sm">Smart Kladblok</span>
+            </a>
+            <a href="#" onclick="switchTab('timer')" class="nav-btn flex items-center gap-3 px-3.5 py-3 rounded-xl font-semibold text-themeTextMuted hover:text-themeText hover:bg-white/5 transition-all" id="tab-timer" title="Focus Timer">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span class="sidebar-label whitespace-nowrap text-sm">Focus Timer</span>
+            </a>
+            <a href="#" onclick="switchTab('layout')" class="nav-btn flex items-center gap-3 px-3.5 py-3 rounded-xl font-semibold text-themeTextMuted hover:text-themeText hover:bg-white/5 transition-all" id="tab-layout" title="Lay-out & Widgets">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM14 11a1 1 0 011-1h4a1 1 0 011 1v8a1 1 0 01-1 1h-4a1 1 0 01-1-1v-8z"></path></svg>
+                <span class="sidebar-label whitespace-nowrap text-sm">Lay-out & Design</span>
+            </a>
+            <a href="#" onclick="switchTab('settings')" class="nav-btn flex items-center gap-3 px-3.5 py-3 rounded-xl font-semibold text-themeTextMuted hover:text-themeText hover:bg-white/5 transition-all" id="tab-settings" title="Systeem">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+                <span class="sidebar-label whitespace-nowrap text-sm">Instellingen</span>
+            </a>
+        </nav>
 
-    // Admin check
-    window.addEventListener("keydown", (e) => {
-        if (e.altKey && e.key === "a") {
-            if (prompt("PIN:") === "202313") { admin = true; alert("ADMIN IS LIVE"); }
+        <div class="mt-auto pt-4 border-t border-white/5 text-center overflow-hidden">
+            <span class="text-[9px] tracking-widest text-themeTextMuted font-bold block uppercase whitespace-nowrap sidebar-label">Naim Cloud Software</span>
+            <span class="text-[8px] text-themeTextMuted opacity-60 block mt-0.5 whitespace-nowrap sidebar-label">v5.0.0 Premium</span>
+        </div>
+    </aside>
+
+    <!-- MAIN WORKSPACE -->
+    <main class="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full overflow-y-auto h-screen pb-24 md:pb-8">
+        
+        <!-- HEADER / WELCOME -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <div>
+                <h1 id="greeting" class="text-3xl md:text-4xl font-extrabold tracking-tight text-themeText mb-1">Welkom...</h1>
+                <p id="quote" class="text-xs md:text-sm text-themeTextMuted italic">"Focus op de toekomst, creëer vandaag."</p>
+            </div>
+            <!-- Live clock widget -->
+            <div class="glass-panel px-4 py-2.5 flex items-center gap-4 self-stretch md:self-auto justify-between shadow-md">
+                <div class="text-right">
+                    <span id="currentDate" class="text-[11px] text-themeTextMuted block font-semibold uppercase tracking-wider">...</span>
+                    <span id="currentTime" class="text-lg font-bold text-themeAccent font-mono">00:00:00</span>
+                </div>
+                <div class="w-9 h-9 rounded-xl bg-sky-500/10 flex items-center justify-center text-themeAccent">
+                    <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+            </div>
+        </header>
+
+        <!-- APP TABS CONTENT -->
+        
+        <!-- Tab: DASHBOARD -->
+        <section id="pane-dashboard" class="tab-pane space-y-6">
+            <!-- Dynamic Widget Container configured by Layout Engine -->
+            <div id="dashboard-widgets-container" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Dynamically populated via renderDashboard() -->
+            </div>
+        </section>
+
+        <!-- Tab: SCHEDULE WEEKPLANNER -->
+        <section id="pane-schedule" class="tab-pane hidden space-y-6">
+            <div class="glass-panel p-6 shadow-lg">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-themeText">Interactief Weekrooster</h2>
+                        <p class="text-sm text-themeTextMuted">Bepaal zelf je schoolvakken. Klik in een vak om direct te wijzigen; wijzigingen worden live lokaal opgeslagen.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="triggerResetScheduleModal()" class="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 text-themeTextMuted hover:text-themeText font-semibold rounded-xl text-xs transition-all">
+                            Herstel Standaard
+                        </button>
+                        <button onclick="saveWeekSchedule()" class="px-4 py-1.5 bg-themeAccent text-white font-bold rounded-xl text-xs transition-all shadow-md">
+                            Opslaan
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Responsive Grid Table for Schedule -->
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[800px] text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-white/5">
+                                <th class="py-3 px-4 text-xs font-bold uppercase tracking-wider text-themeTextMuted w-1/12">Uur</th>
+                                <th class="py-3 px-4 text-xs font-bold uppercase tracking-wider text-themeAccent w-2/12">Maandag</th>
+                                <th class="py-3 px-4 text-xs font-bold uppercase tracking-wider text-themeAccent w-2/12">Dinsdag</th>
+                                <th class="py-3 px-4 text-xs font-bold uppercase tracking-wider text-themeAccent w-2/12">Woensdag</th>
+                                <th class="py-3 px-4 text-xs font-bold uppercase tracking-wider text-themeAccent w-2/12">Donderdag</th>
+                                <th class="py-3 px-4 text-xs font-bold uppercase tracking-wider text-themeAccent w-2/12">Vrijdag</th>
+                            </tr>
+                        </thead>
+                        <tbody id="schedule-matrix-body" class="divide-y divide-white/5 text-sm">
+                            <!-- Populated with editable inputs/cells -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: HOMEWORK & TASKS -->
+        <section id="pane-homework" class="tab-pane hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Task Creator -->
+                <div class="glass-panel p-6 shadow-lg h-fit">
+                    <h3 class="text-lg font-bold text-themeText mb-4">Nieuwe Taak Toevoegen</h3>
+                    <form id="task-form" onsubmit="handleAddTask(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-themeTextMuted uppercase mb-1">Titel / Omschrijving</label>
+                            <input type="text" id="task-title" required placeholder="Bijv. Projectverslag AI inleveren" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 focus:outline-none focus:border-themeAccent text-sm text-themeText">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-themeTextMuted uppercase mb-1">Prioriteit</label>
+                                <select id="task-priority" class="w-full bg-[#0c0d15] border border-white/10 rounded-xl px-3 py-2.5 focus:outline-none focus:border-themeAccent text-sm text-themeText">
+                                    <option value="Laag" class="bg-black text-white">Laag</option>
+                                    <option value="Medium" selected class="bg-black text-white">Medium</option>
+                                    <option value="Hoog" class="bg-black text-white">Hoog</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-themeTextMuted uppercase mb-1">Deadline</label>
+                                <input type="date" id="task-duedate" required class="w-full bg-[#0c0d15] border border-white/10 rounded-xl px-3 py-2.5 focus:outline-none focus:border-themeAccent text-sm text-themeText">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full py-2.5 bg-themeAccent hover:opacity-95 text-white font-bold rounded-xl transition-all shadow-md text-sm">
+                            Voeg Taak Toe
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Tasks List -->
+                <div class="lg:col-span-2 glass-panel p-6 shadow-lg flex flex-col">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                        <h2 class="text-xl font-bold text-themeText">Actieve Taken & Deadlines</h2>
+                        <div class="flex gap-1 bg-white/5 p-1 rounded-xl">
+                            <button onclick="filterTasks('all')" class="px-3 py-1 bg-themeAccent/20 text-themeAccent font-bold rounded-lg text-xs" id="filter-all">Alles</button>
+                            <button onclick="filterTasks('pending')" class="px-3 py-1 hover:bg-white/5 text-themeTextMuted hover:text-themeText font-semibold rounded-lg text-xs" id="filter-pending">In afwachting</button>
+                            <button onclick="filterTasks('completed')" class="px-3 py-1 hover:bg-white/5 text-themeTextMuted hover:text-themeText font-semibold rounded-lg text-xs" id="filter-completed">Voltooid</button>
+                        </div>
+                    </div>
+                    <div id="full-tasks-list" class="space-y-3 flex-1 overflow-y-auto max-h-[450px] pr-2">
+                        <!-- Dynamic -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: GRADES TRACKER & TARGET CALCULATOR -->
+        <section id="pane-grades" class="tab-pane hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left panel: Grade Add and Calculator -->
+                <div class="space-y-6">
+                    <!-- Grade Form -->
+                    <div class="glass-panel p-6 shadow-lg">
+                        <h3 class="text-lg font-bold text-themeText mb-4">Cijfer Invoeren</h3>
+                        <form id="grade-form" onsubmit="handleAddGrade(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-themeTextMuted uppercase mb-1">Vaknaam</label>
+                                <input type="text" id="grade-subject" required placeholder="Bijv. Web Architecture" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 focus:outline-none focus:border-themeAccent text-sm text-themeText">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-themeTextMuted uppercase mb-1">Cijfer</label>
+                                    <input type="number" step="0.1" min="1" max="10" id="grade-val" required placeholder="7.5" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 focus:outline-none focus:border-themeAccent text-sm text-themeText">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-themeTextMuted uppercase mb-1">Weging (x)</label>
+                                    <input type="number" step="0.1" min="0" id="grade-weight" required placeholder="1.0" value="1.0" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 focus:outline-none focus:border-themeAccent text-sm text-themeText">
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full py-2.5 bg-themeAccent hover:opacity-95 text-white font-bold rounded-xl transition-all shadow-md text-sm">
+                                Cijfer Toevoegen
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Target Predictor Tool -->
+                    <div class="glass-panel p-6 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-base">🔮</span>
+                            <h3 class="text-base font-extrabold text-themeText">Cijfer Voorspeller</h3>
+                        </div>
+                        <p class="text-xs text-themeTextMuted mb-4">Bereken welk cijfer je voor je volgende toets moet halen om je droomgemiddelde te bereiken.</p>
+                        
+                        <div class="space-y-3 text-xs">
+                            <div>
+                                <label class="block font-bold text-themeTextMuted uppercase mb-1">Selecteer Vak</label>
+                                <select id="predict-subject-select" class="w-full bg-[#0c0d15] border border-white/10 rounded-xl px-3 py-2.5 focus:outline-none focus:border-themeAccent text-themeText">
+                                    <!-- Dynamic -->
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block font-bold text-themeTextMuted uppercase mb-1">Doel Gemiddelde</label>
+                                    <input type="number" step="0.1" min="1" max="10" id="predict-target-avg" value="6.0" class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 focus:outline-none focus:border-themeAccent text-themeText">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-themeTextMuted uppercase mb-1">Weging Volgende</label>
+                                    <input type="number" step="0.1" min="0.1" id="predict-next-weight" value="1.0" class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 focus:outline-none focus:border-themeAccent text-themeText">
+                                </div>
+                            </div>
+                            <button onclick="calculateTargetGrade()" type="button" class="w-full py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl transition-all shadow-md text-xs">
+                                Bereken Benodigd Cijfer
+                            </button>
+                            <!-- Result Box -->
+                            <div id="prediction-result" class="hidden mt-3 p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 text-center font-semibold text-themeAccent">
+                                
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grades Analysis & List -->
+                <div class="lg:col-span-2 glass-panel p-6 shadow-lg flex flex-col">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-themeText">Resultatenoverzicht</h2>
+                        <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-lg" id="overall-average-display">Gemiddelde: 0.0</span>
+                    </div>
+
+                    <!-- Subjects breakdown averages -->
+                    <div id="grades-subject-averages" class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+                        <!-- Dynamic tags -->
+                    </div>
+
+                    <!-- Grades Table -->
+                    <div class="overflow-x-auto flex-1 max-h-[350px] overflow-y-auto pr-2">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-white/5 text-themeTextMuted text-xs uppercase tracking-wider font-bold">
+                                    <th class="py-2 px-3">Vak</th>
+                                    <th class="py-2 px-3">Cijfer</th>
+                                    <th class="py-2 px-3">Weging</th>
+                                    <th class="py-2 px-3 text-right">Actie</th>
+                                </tr>
+                            </thead>
+                            <tbody id="grades-list-body" class="text-sm divide-y divide-white/5">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: FLASHCARDS -->
+        <section id="pane-flashcards" class="tab-pane hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Creator Panel -->
+                <div class="glass-panel p-6 shadow-lg h-fit">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="text-base">🗂️</span>
+                        <h3 class="text-lg font-bold text-themeText">Flitskaart Aanmaken</h3>
+                    </div>
+                    <form id="flashcard-form" onsubmit="handleAddFlashcard(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-themeTextMuted uppercase mb-1">Onderwerp / Categorie</label>
+                            <input type="text" id="fc-category" required placeholder="Bijv. Web Development" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 focus:outline-none focus:border-themeAccent text-sm text-themeText">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-themeTextMuted uppercase mb-1">Vraag (Voorkant)</label>
+                            <input type="text" id="fc-front" required placeholder="Bijv. Wat betekent DOM?" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 focus:outline-none focus:border-themeAccent text-sm text-themeText">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-themeTextMuted uppercase mb-1">Antwoord (Achterkant)</label>
+                            <textarea id="fc-back" required rows="3" placeholder="Bijv. Document Object Model..." class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 focus:outline-none focus:border-themeAccent text-sm text-themeText"></textarea>
+                        </div>
+                        <button type="submit" class="w-full py-2.5 bg-themeAccent hover:opacity-95 text-white font-bold rounded-xl transition-all shadow-md text-sm">
+                            Voeg Kaart Toe
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Study Area -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="flex justify-between items-center glass-panel p-4 shadow-md">
+                        <h2 class="text-lg font-bold text-themeText">Jouw Flitskaarten</h2>
+                        <span class="text-xs font-bold bg-themeAccent/10 text-themeAccent px-3 py-1.5 rounded-xl" id="fc-counter">0 Kaarten</span>
+                    </div>
+
+                    <!-- Flashcard Grid Display -->
+                    <div id="flashcard-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Dynamic Flashcards -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: SMART NOTE SCRATCHPAD -->
+        <section id="pane-notes" class="tab-pane hidden space-y-6">
+            <div class="glass-panel p-6 shadow-lg">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-themeText">Smart Kladblok</h2>
+                        <p class="text-xs text-themeTextMuted">Typ hier je snelle aantekeningen tijdens de les. Alles wordt automatisch live opgeslagen.</p>
+                    </div>
+                    <!-- Actions -->
+                    <div class="flex items-center gap-2 self-stretch sm:self-auto">
+                        <div class="text-xs font-mono text-themeTextMuted px-3 py-2 bg-white/5 rounded-xl border border-transparent">
+                            <span id="note-char-count">0</span> tekens | <span id="note-word-count">0</span> woorden
+                        </div>
+                        <button onclick="downloadNotes()" class="p-2 bg-themeAccent hover:opacity-90 text-white rounded-xl shadow-md transition-all" title="Exporteer als bestand">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <textarea id="smart-scratchpad" oninput="handleNoteChange(this.value)" rows="16" placeholder="Begin hier met typen... Snelnotities worden live onthouden." class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 focus:outline-none focus:border-themeAccent text-sm font-medium leading-relaxed text-themeText"></textarea>
+            </div>
+        </section>
+
+        <!-- Tab: FOCUS TIMER -->
+        <section id="pane-timer" class="tab-pane hidden space-y-6">
+            <div class="max-w-md mx-auto glass-panel p-8 shadow-lg flex flex-col items-center text-center">
+                <span class="text-xs font-extrabold tracking-widest text-themeAccent uppercase mb-2">Focus Methode</span>
+                <h2 class="text-2xl font-black text-themeText mb-6">Pomodoro Timer</h2>
+
+                <!-- Timer Ring / Visualization -->
+                <div class="relative w-64 h-64 flex items-center justify-center mb-8">
+                    <!-- SVG Progress Circle -->
+                    <svg class="w-full h-full transform -rotate-90">
+                        <circle cx="128" cy="128" r="110" stroke="rgba(255,255,255,0.03)" stroke-width="8" fill="transparent"/>
+                        <circle id="timer-progress-ring" cx="128" cy="128" r="110" stroke="currentColor" class="text-themeAccent" stroke-width="8" fill="transparent" stroke-dasharray="691" stroke-dashoffset="0" style="transition: stroke-dashoffset 1s linear;"/>
+                    </svg>
+                    <!-- Time Display inside ring -->
+                    <div class="absolute flex flex-col items-center">
+                        <span id="timer-display" class="text-5xl font-black tracking-tight font-mono text-themeText">25:00</span>
+                        <span id="timer-status" class="text-xs font-bold text-themeTextMuted uppercase mt-2">Studeer-tijd</span>
+                    </div>
+                </div>
+
+                <!-- Timer Controls -->
+                <div class="flex gap-4 mb-6">
+                    <button id="btn-timer-toggle" onclick="toggleTimer()" class="px-6 py-3 bg-themeAccent hover:opacity-95 text-white font-extrabold rounded-xl transition-all shadow-lg text-sm min-w-[100px]">
+                        Start
+                    </button>
+                    <button onclick="resetTimer()" class="px-6 py-3 bg-white/5 hover:bg-white/10 text-themeTextMuted hover:text-themeText font-bold rounded-xl transition-all text-sm">
+                        Reset
+                    </button>
+                </div>
+
+                <!-- Mode Selectors -->
+                <div class="flex bg-white/5 p-1 rounded-2xl w-full">
+                    <button id="btn-mode-study" onclick="setTimerMode('study')" class="flex-1 py-2 text-xs font-bold rounded-xl text-themeAccent bg-sky-500/10 transition-all">
+                        Focus (25m)
+                    </button>
+                    <button id="btn-mode-short" onclick="setTimerMode('short')" class="flex-1 py-2 text-xs font-bold rounded-xl text-themeTextMuted hover:text-themeText transition-all">
+                        Kort (5m)
+                    </button>
+                    <button id="btn-mode-long" onclick="setTimerMode('long')" class="flex-1 py-2 text-xs font-bold rounded-xl text-themeTextMuted hover:text-themeText transition-all">
+                        Lang (15m)
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: LAYOUT & THEMES MANAGER -->
+        <section id="pane-layout" class="tab-pane hidden space-y-6">
+            <div class="max-w-4xl mx-auto space-y-6">
+                <!-- Theme Presets Selection -->
+                <div class="glass-panel p-6 shadow-lg space-y-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-themeText mb-1">Portaal Thema Engine</h2>
+                        <p class="text-sm text-themeTextMuted">Kies een complete visuele stijl die bij jouw humeur of werkwijze past.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Space Vibe -->
+                        <button onclick="applyPredefinedTheme('space')" class="p-4 rounded-2xl border text-left flex flex-col justify-between h-28 hover:scale-[1.02] transition-transform bg-[#05050a]/80 border-sky-500/20 shadow-md">
+                            <span class="text-xs font-bold text-sky-400 uppercase tracking-widest">Aero Dark</span>
+                            <span class="font-bold text-white text-sm">Deep Space</span>
+                            <span class="text-[10px] text-gray-400">Midnight Blue & Soft Cyan Glow</span>
+                        </button>
+
+                        <!-- Alabaster Satin -->
+                        <button onclick="applyPredefinedTheme('alabaster')" class="p-4 rounded-2xl border text-left flex flex-col justify-between h-28 hover:scale-[1.02] transition-transform bg-[#f8fafc] border-slate-200 shadow-sm">
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Satin Light</span>
+                            <span class="font-bold text-slate-800 text-sm">Alabaster Satin</span>
+                            <span class="text-[10px] text-slate-500 font-medium">Warm Minimum Gray & Elegant Contrast</span>
+                        </button>
+
+                        <!-- Cyberpunk Grid -->
+                        <button onclick="applyPredefinedTheme('cyberpunk')" class="p-4 rounded-2xl border text-left flex flex-col justify-between h-28 hover:scale-[1.02] transition-transform bg-[#020005] border-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.15)]">
+                            <span class="text-xs font-bold text-pink-400 uppercase tracking-widest">High-Fi Hacker</span>
+                            <span class="font-bold text-[#00ffcc] text-sm font-mono">Cyberpunk Grid</span>
+                            <span class="text-[10px] text-pink-400/80 font-mono">Pitch Black & Intense Pink/Cyan</span>
+                        </button>
+
+                        <!-- Nordic Forest -->
+                        <button onclick="applyPredefinedTheme('forest')" class="p-4 rounded-2xl border text-left flex flex-col justify-between h-28 hover:scale-[1.02] transition-transform bg-[#0a0f0d] border-emerald-500/20 shadow-md">
+                            <span class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Organic Cozy</span>
+                            <span class="font-bold text-emerald-100 text-sm">Nordic Forest</span>
+                            <span class="text-[10px] text-emerald-300/60">Warm Pine Greens & Mint Soft Light</span>
+                        </button>
+
+                        <!-- Sunset Horizon -->
+                        <button onclick="applyPredefinedTheme('sunset')" class="p-4 rounded-2xl border text-left flex flex-col justify-between h-28 hover:scale-[1.02] transition-transform bg-[#08020e] border-purple-500/20 shadow-lg">
+                            <span class="text-xs font-bold text-orange-400 uppercase tracking-widest">Dreamy Gradients</span>
+                            <span class="font-bold text-purple-100 text-sm">Sunset Horizon</span>
+                            <span class="text-[10px] text-purple-300/60">Dusk Purple, Velvet Shadows & Coral</span>
+                        </button>
+
+                        <!-- Dracula Dark -->
+                        <button onclick="applyPredefinedTheme('dracula')" class="p-4 rounded-2xl border text-left flex flex-col justify-between h-28 hover:scale-[1.02] transition-transform bg-[#282a36] border-[#bd93f9]/20 shadow-md">
+                            <span class="text-xs font-bold text-[#50fa7b] uppercase tracking-widest">Classic Code</span>
+                            <span class="font-bold text-[#f8f8f2] text-sm">Dracula Theme</span>
+                            <span class="text-[10px] text-[#bd93f9]">Hacker Slate, Soft Purple & Vampire Green</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Custom Dashboard Layout & Widgets manager -->
+                <div class="glass-panel p-6 shadow-lg space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-themeText mb-1">Dashboard Lay-out Editor</h2>
+                        <p class="text-sm text-themeTextMuted">Configureer de structuur, grootte, randen en positie van je actieve widgets.</p>
+                    </div>
+
+                    <!-- Layout Mode Selector -->
+                    <div class="space-y-3">
+                        <label class="block text-xs font-bold text-themeTextMuted uppercase">Indeling Basisstijl</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <button onclick="selectLayoutPreset('bento')" id="btn-layout-bento" class="p-4 rounded-2xl border text-left flex flex-col justify-between hover:border-themeAccent transition-all bg-white/5 border-themeAccent">
+                                <span class="font-bold text-sm text-themeText">Bento Grid (Aanbevolen)</span>
+                                <span class="text-[10px] text-themeTextMuted">Verschillende tegelgroottes die perfect samenpassen.</span>
+                            </button>
+                            <button onclick="selectLayoutPreset('stacked')" id="btn-layout-stacked" class="p-4 rounded-2xl border text-left flex flex-col justify-between hover:border-themeAccent transition-all bg-white/5 border-transparent">
+                                <span class="font-bold text-sm text-themeText">Compact Stacked</span>
+                                <span class="text-[10px] text-themeTextMuted">Eén grote kolom met overzichtelijke kaarten.</span>
+                            </button>
+                            <button onclick="selectLayoutPreset('split')" id="btn-layout-split" class="p-4 rounded-2xl border text-left flex flex-col justify-between hover:border-themeAccent transition-all bg-white/5 border-transparent">
+                                <span class="font-bold text-sm text-themeText">Split-View Feed</span>
+                                <span class="text-[10px] text-themeTextMuted">Twee hoofdkolommen met zijpaneel voor snelle toegang.</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Shape, Shadows and Styling Sliders -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-white/5">
+                        <div class="space-y-3">
+                            <label class="block text-xs font-bold text-themeTextMuted uppercase">Tegelhoeken (Border Radius)</label>
+                            <div class="flex items-center gap-4">
+                                <input type="range" id="input-radius" min="0" max="32" step="4" value="24" oninput="handleStyleModifierChange('radius', this.value)" class="flex-1 accent-themeAccent">
+                                <span id="val-radius" class="text-sm font-mono font-bold w-12 text-right">24px</span>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <label class="block text-xs font-bold text-themeTextMuted uppercase">Schaduwsterkte (Shadow Depth)</label>
+                            <div class="flex items-center gap-4">
+                                <input type="range" id="input-shadow" min="0" max="4" step="1" value="2" oninput="handleStyleModifierChange('shadow', this.value)" class="flex-1 accent-themeAccent">
+                                <span id="val-shadow" class="text-sm font-mono font-bold w-12 text-right">Pro-2</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Widget Enabler / Disabler & Reordering list -->
+                    <div class="pt-6 border-t border-white/5 space-y-4">
+                        <h3 class="text-sm font-bold text-themeText uppercase tracking-wider">Actieve Dashboard Widgets</h3>
+                        <p class="text-xs text-themeTextMuted">Klik op de toggle-knop om een widget te verbergen. Gebruik de knoppen om ze te herschikken.</p>
+
+                        <div id="widgets-manager-list" class="space-y-2">
+                            <!-- Dynamic list of widgets with reorder controls and eye toggle -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab: SYSTEM SETTINGS -->
+        <section id="pane-settings" class="tab-pane hidden space-y-6">
+            <div class="max-w-2xl mx-auto glass-panel p-8 shadow-lg space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-themeText mb-1">Systeem Configuraties</h2>
+                    <p class="text-sm text-themeTextMuted">Beheer je naam, schooluren en prestatie-instellingen.</p>
+                </div>
+
+                <hr class="border-white/5">
+
+                <!-- Personalization -->
+                <div class="space-y-4">
+                    <h3 class="text-sm font-bold text-themeAccent uppercase tracking-wider">Persoonlijk</h3>
+                    <div>
+                        <label class="block text-xs font-bold text-themeTextMuted uppercase mb-1">Naam Student</label>
+                        <input type="text" id="studentNameInput" placeholder="Bijv. Thomas" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-themeAccent text-sm text-themeText">
+                    </div>
+                </div>
+
+                <!-- Interface Options -->
+                <div class="space-y-4">
+                    <h3 class="text-sm font-bold text-themeAccent uppercase tracking-wider">Muis & Interactie</h3>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Cursor Toggle -->
+                        <div>
+                            <label class="block text-xs font-bold text-themeTextMuted uppercase mb-2">Muis Cursor Stijl</label>
+                            <select id="cursorToggle" onchange="handleCursorToggle(this.value)" class="w-full bg-[#0c0d15] border border-white/10 rounded-xl px-3 py-3 focus:outline-none focus:border-themeAccent text-sm text-themeText">
+                                <option value="enabled" class="bg-black text-white">Sleek Follower (Geactiveerd)</option>
+                                <option value="disabled" class="bg-black text-white">Systeem Cursor (Uitgeschakeld)</option>
+                            </select>
+                        </div>
+
+                        <!-- Schooltimes configuration -->
+                        <div>
+                            <label class="block text-xs font-bold text-themeTextMuted uppercase mb-2">Start Lesuur</label>
+                            <select id="startLesson" class="w-full bg-[#0c0d15] border border-white/10 rounded-xl px-3 py-3 focus:outline-none focus:border-themeAccent text-sm text-themeText">
+                                <option value="1" class="bg-black text-white">1e uur (08:30)</option>
+                                <option value="2" class="bg-black text-white">2e uur (09:20)</option>
+                                <option value="3" class="bg-black text-white">3e uur (10:35)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hours config -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-themeTextMuted uppercase mb-1">Einde Lesuur</label>
+                        <select id="endLesson" class="w-full bg-[#0c0d15] border border-white/10 rounded-xl px-3 py-3 focus:outline-none focus:border-themeAccent text-sm text-themeText">
+                            <option value="6" class="bg-black text-white">6e uur (14:25)</option>
+                            <option value="7" class="bg-black text-white">7e uur (15:15)</option>
+                            <option value="8" class="bg-black text-white">8e uur (16:05)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="pt-4">
+                    <button onclick="saveGlobalSettings()" class="w-full py-3 bg-themeAccent hover:opacity-95 text-white font-extrabold rounded-xl transition-all shadow-lg text-sm">
+                        Instellingen Toepassen & Opslaan
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Custom Elegant Confirmation Dialog Modal instead of alert/confirm -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-[#0f111a] border border-white/10 p-6 md:p-8 rounded-3xl max-w-sm w-full shadow-xl transform scale-90 transition-all duration-300" id="confirm-modal-box">
+            <div class="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 mb-4 mx-auto">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <h3 class="text-lg font-bold text-white text-center mb-2" id="confirm-title">Zeker weten?</h3>
+            <p class="text-sm text-gray-400 text-center mb-6" id="confirm-desc">Dit herstelt je volledige weekrooster naar het standaard portaalrooster.</p>
+            <div class="flex gap-3">
+                <button id="confirm-btn-cancel" class="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-all text-sm">Annuleren</button>
+                <button id="confirm-btn-yes" class="flex-1 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition-all text-sm">Doorgaan</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Global Javascript for State & Logic -->
+    <script>
+        // Core state management
+        let currentTab = 'dashboard';
+        let studentName = localStorage.getItem('ncs_studentName') || 'Student';
+        let startLesson = parseInt(localStorage.getItem('ncs_startLesson')) || 1;
+        let endLesson = parseInt(localStorage.getItem('ncs_endLesson')) || 8;
+        let cursorPref = localStorage.getItem('ncs_cursorPref') || 'enabled'; // 'enabled', 'disabled'
+        let sidebarCollapsed = localStorage.getItem('ncs_sidebarCollapsed') === 'true';
+
+        // Custom Layout customization properties
+        let activeLayoutPreset = localStorage.getItem('ncs_layoutPreset') || 'bento'; // bento, stacked, split
+        let customCardRadius = localStorage.getItem('ncs_cardRadius') || '24px';
+        let customShadowLevel = localStorage.getItem('ncs_shadowLevel') || '2'; // 0, 1, 2, 3, 4
+
+        // Widgets sorting & visibility configuration
+        const defaultWidgets = [
+            { id: 'widget-live-status', name: 'Actuele Status', visible: true, size: 'col-span-2' },
+            { id: 'widget-quick-stats', name: 'Snelle Statistieken', visible: true, size: 'col-span-1' },
+            { id: 'widget-schedule', name: 'Vandaag Rooster', visible: true, size: 'col-span-2' },
+            { id: 'widget-tasks', name: 'Urgente Taken', visible: true, size: 'col-span-1' },
+            { id: 'widget-scratchpad-preview', name: 'Notitie Kladblok Preview', visible: true, size: 'col-span-3' }
+        ];
+        let dashboardWidgets = JSON.parse(localStorage.getItem('ncs_dashboardWidgets')) || defaultWidgets;
+
+        // Theme properties database
+        const themes = {
+            space: {
+                bg: 'radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.15) 0px, transparent 40%), radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 45%), radial-gradient(at 50% 100%, rgba(236, 72, 153, 0.06) 0px, transparent 40%)',
+                bgColor: '#05050a',
+                card: 'rgba(15, 15, 25, 0.7)',
+                border: 'rgba(255, 255, 255, 0.06)',
+                textPrimary: '#f3f4f6',
+                textMuted: '#9ca3af',
+                accent: '#0ea5e9',
+                accentRgb: '14, 165, 233',
+                font: "'Plus Jakarta Sans', sans-serif"
+            },
+            alabaster: {
+                bg: 'radial-gradient(at 0% 0%, rgba(15, 23, 42, 0.03) 0px, transparent 35%), radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.02) 0px, transparent 40%)',
+                bgColor: '#f8fafc',
+                card: 'rgba(255, 255, 255, 0.85)',
+                border: 'rgba(15, 23, 42, 0.06)',
+                textPrimary: '#0f172a',
+                textMuted: '#64748b',
+                accent: '#3b82f6',
+                accentRgb: '59, 130, 246',
+                font: "'Plus Jakarta Sans', sans-serif"
+            },
+            cyberpunk: {
+                bg: 'radial-gradient(at 0% 0%, rgba(236, 72, 153, 0.25) 0px, transparent 40%), radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.25) 0px, transparent 40%)',
+                bgColor: '#020005',
+                card: 'rgba(10, 5, 20, 0.85)',
+                border: 'rgba(236, 72, 153, 0.4)',
+                textPrimary: '#00ffcc',
+                textMuted: '#f43f5e',
+                accent: '#f43f5e',
+                accentRgb: '244, 63, 94',
+                font: "'JetBrains Mono', monospace"
+            },
+            forest: {
+                bg: 'radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.12) 0px, transparent 35%), radial-gradient(at 100% 100%, rgba(52, 211, 153, 0.05) 0px, transparent 40%)',
+                bgColor: '#0a0f0d',
+                card: 'rgba(15, 25, 22, 0.8)',
+                border: 'rgba(255, 255, 255, 0.05)',
+                textPrimary: '#e6f4ea',
+                textMuted: '#8fbaa3',
+                accent: '#10b981',
+                accentRgb: '16, 185, 129',
+                font: "'Plus Jakarta Sans', sans-serif"
+            },
+            sunset: {
+                bg: 'radial-gradient(at 0% 0%, rgba(249, 115, 22, 0.1) 0px, transparent 40%), radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.15) 0px, transparent 45%)',
+                bgColor: '#08020e',
+                card: 'rgba(20, 10, 32, 0.75)',
+                border: 'rgba(255, 255, 255, 0.05)',
+                textPrimary: '#fbf7fe',
+                textMuted: '#a78bfa',
+                accent: '#f97316',
+                accentRgb: '249, 115, 22',
+                font: "'Plus Jakarta Sans', sans-serif"
+            },
+            dracula: {
+                bg: 'none',
+                bgColor: '#282a36',
+                card: 'rgba(40, 42, 54, 0.95)',
+                border: 'rgba(189, 147, 249, 0.25)',
+                textPrimary: '#f8f8f2',
+                textMuted: '#6272a4',
+                accent: '#50fa7b',
+                accentRgb: '80, 250, 123',
+                font: "'JetBrains Mono', monospace"
+            }
+        };
+
+        let currentActiveThemeKey = localStorage.getItem('ncs_activeThemeKey') || 'space';
+
+        // Original default futuristic weekly schedule
+        const defaultSchedule = {
+            1: {1: 'Artificial Intelligence', 2: 'Creative Writing', 3: 'System Architecture', 4: 'Creative Writing', 5: 'Cybersecurity', 6: 'Digital Marketing', 7: 'Data Science', 8: 'Project Studio'},
+            2: {1: 'System Architecture', 2: 'Web Development', 3: 'Artificial Intelligence', 4: 'Digital Marketing', 5: 'Cybersecurity', 6: 'User Experience (UX)', 7: 'Data Science', 8: ''},
+            3: {1: 'Web Development', 2: 'Data Science', 3: 'Creative Writing', 4: 'User Experience (UX)', 5: 'Cybersecurity', 6: 'Project Studio', 7: '', 8: ''},
+            4: {1: 'Artificial Intelligence', 2: 'Creative Writing', 3: 'System Architecture', 4: 'Digital Marketing', 5: 'Web Development', 6: 'Project Studio', 7: 'L.O. (Gym)', 8: ''},
+            5: {1: 'User Experience (UX)', 2: 'Web Development', 3: 'Cybersecurity', 4: 'Data Science', 5: 'Project Studio', 6: 'Vrij Studieblok', 7: '', 8: ''}
+        };
+
+        let weekSchedule = JSON.parse(localStorage.getItem('ncs_weekSchedule')) || defaultSchedule;
+        let tasks = JSON.parse(localStorage.getItem('ncs_tasks')) || [];
+        let grades = JSON.parse(localStorage.getItem('ncs_grades')) || [];
+        let flashcards = JSON.parse(localStorage.getItem('ncs_flashcards')) || [
+            { id: 1, category: 'Web Dev', front: 'Wat is de betekenis van DOM?', back: 'Document Object Model - de dynamische boomstructuur van HTML-elementen.' },
+            { id: 2, category: 'System Design', front: 'Wat is het voordeel van Microservices?', back: 'Hogere schaalbaarheid, onafhankelijke deployments en betere fouttolerantie.' }
+        ];
+        let noteContent = localStorage.getItem('ncs_noteContent') || '';
+        let activeTaskFilter = 'all';
+
+        // Constants for school timeslots
+        const timeslots = [
+            { id: 1, name: '1e uur', start: '08:30', end: '09:20' },
+            { id: 2, name: '2e uur', start: '09:20', end: '10:10' },
+            { id: 'p1', name: 'Kleine Pauze', start: '10:10', end: '10:35', isBreak: true },
+            { id: 3, name: '3e uur', start: '10:35', end: '11:25' },
+            { id: 4, name: '4e uur', start: '11:25', end: '12:15' },
+            { id: 'p2', name: 'Grote Pauze', start: '12:15', end: '12:45', isBreak: true },
+            { id: 5, name: '5e uur', start: '12:45', end: '13:35' },
+            { id: 6, name: '6e uur', start: '13:35', end: '14:25' },
+            { id: 7, name: '7e uur', start: '14:25', end: '15:15' },
+            { id: 8, name: '8e uur', start: '15:15', end: '16:05' }
+        ];
+
+        // Focus Timer State
+        let timerInterval = null;
+        let timerSecondsLeft = 25 * 60;
+        let timerMode = 'study'; // 'study', 'short', 'long'
+        let timerIsRunning = false;
+        const timerDurations = {
+            study: 25 * 60,
+            short: 5 * 60,
+            long: 15 * 60
+        };
+
+        const quotes = [
+            "\"Succes is niet de sleutel tot geluk. Geluk is de sleutel tot succes.\"",
+            "\"De toekomst hangt af van wat je vandaag doet.\"",
+            "\"Leren is de enige schat die zijn eigenaar overal volgt.\"",
+            "\"Geloof dat je het kunt en je bent al halverwege.\"",
+            "\"Fouten zijn het bewijs dat je het probeert.\"",
+            "\"Focus op vooruitgang, niet op perfectie.\"",
+            "\"Beter één kleine stap vooruit dan een grote sprong op de plaats.\""
+        ];
+
+        // Initializer
+        window.onload = function () {
+            initApp();
+            
+            // Interval updates
+            setInterval(updateClock, 1000);
+            setInterval(updateLiveLessonStatus, 30000);
+            
+            // Random quote
+            const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+            document.getElementById('quote').textContent = randomQuote;
         }
-    });
 
-    // Chat logica
-    const scherm = document.getElementById('scherm');
-    onSnapshot(query(collection(db, "chats"), orderBy("tijd")), (snap) => {
-        scherm.innerHTML = "";
-        snap.forEach((doc) => {
-            let d = doc.data();
-            scherm.innerHTML += `<div class="msg ${d.wie}">${d.txt}</div>`;
-        });
-        scherm.scrollTop = scherm.scrollHeight;
-    });
+        function initApp() {
+            // Apply loaded design configurations
+            applyThemeVariables(currentActiveThemeKey);
+            applyStylesModifiersToDOM();
+            handleCursorToggle(cursorPref, false);
+            applySidebarCollapse();
 
-    window.stuur = async () => {
-        let val = document.getElementById('input').value;
-        await addDoc(collection(db, "chats"), {
-            txt: val,
-            wie: admin ? 'admin' : 'user',
-            tijd: serverTimestamp()
-        });
-        document.getElementById('input').value = "";
-    };
-</script>
+            document.getElementById('studentNameInput').value = studentName;
+            document.getElementById('startLesson').value = startLesson;
+            document.getElementById('endLesson').value = endLesson;
+            document.getElementById('cursorToggle').value = cursorPref;
+            document.getElementById('smart-scratchpad').value = noteContent;
+
+            // Fill Sliders
+            document.getElementById('input-radius').value = parseInt(customCardRadius);
+            document.getElementById('val-radius').textContent = customCardRadius;
+            document.getElementById('input-shadow').value = customShadowLevel;
+            document.getElementById('val-shadow').textContent = 'Pro-' + customShadowLevel;
+
+            // Active layout styles buttons
+            updateLayoutPresetButtons(activeLayoutPreset);
+
+            // Renders
+            renderScheduleMatrix();
+            renderDashboard();
+            renderTasksList();
+            renderGrades();
+            renderFlashcards();
+            renderWidgetsManagerList();
+            updateClock();
+            updateGreeting();
+            updateLiveLessonStatus();
+            updateNoteCounters();
+
+            // Setup Custom Cursor listeners (only if enabled & pointer match)
+            setupCursorTracking();
+
+            // Mobile menu toggle
+            document.getElementById('menu-toggle').addEventListener('click', () => {
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.toggle('-translate-x-full');
+            });
+        }
+
+        // --- COLLAPSIBLE SIDEBAR ---
+        function toggleSidebarCollapse() {
+            sidebarCollapsed = !sidebarCollapsed;
+            localStorage.setItem('ncs_sidebarCollapsed', sidebarCollapsed);
+            applySidebarCollapse();
+        }
+
+        function applySidebarCollapse() {
+            const sidebar = document.getElementById('sidebar');
+            const labels = document.querySelectorAll('.sidebar-label');
+            const arrow = document.getElementById('collapse-arrow-icon');
+            const logoContainer = document.getElementById('sidebar-logo-container');
+
+            if (sidebarCollapsed) {
+                sidebar.classList.remove('w-64');
+                sidebar.classList.add('w-[74px]');
+                labels.forEach(el => el.classList.add('hidden'));
+                arrow.classList.add('rotate-180');
+                logoContainer.classList.add('justify-center');
+            } else {
+                sidebar.classList.remove('w-[74px]');
+                sidebar.classList.add('w-64');
+                labels.forEach(el => el.classList.remove('hidden'));
+                arrow.classList.remove('rotate-180');
+                logoContainer.classList.remove('justify-center');
+            }
+        }
+
+        // --- STREAMING_CHUNK: Setting up the customizable theme engine variables... ---
+        // --- CUSTOM THEME ENGINE VARIABLES ---
+        function applyThemeVariables(themeKey) {
+            currentActiveThemeKey = themeKey;
+            localStorage.setItem('ncs_activeThemeKey', themeKey);
+            const data = themes[themeKey];
+            if(!data) return;
+
+            const root = document.documentElement;
+            root.style.setProperty('--bg-color', data.bgColor);
+            root.style.setProperty('--bg-image', data.bg);
+            root.style.setProperty('--card-color', data.card);
+            root.style.setProperty('--border-color', data.border);
+            root.style.setProperty('--text-primary', data.textPrimary);
+            root.style.setProperty('--text-muted', data.textMuted);
+            root.style.setProperty('--accent-color', data.accent);
+            root.style.setProperty('--accent-rgb', data.accentRgb);
+            root.style.setProperty('--font-main', data.font);
+
+            // Apply light or dark class to HTML for Tailwind elements
+            if(themeKey === 'alabaster') {
+                root.classList.remove('dark');
+            } else {
+                root.classList.add('dark');
+            }
+
+            // Sync settings selection UI if in layout panel
+            document.querySelectorAll('[onclick^="applyPredefinedTheme"]').forEach(btn => {
+                btn.classList.remove('ring-4', 'ring-themeAccent');
+            });
+            
+            // Render active indicators
+            applyStylesModifiersToDOM();
+        }
+
+        function applyPredefinedTheme(key) {
+            applyThemeVariables(key);
+            showNotification(`Thema overgeschakeld naar: ${themes[key].name || key}!`);
+        }
+
+        // --- LAYOUT ENGINE CONFIGURATIONS ---
+        function selectLayoutPreset(preset) {
+            activeLayoutPreset = preset;
+            localStorage.setItem('ncs_layoutPreset', preset);
+            updateLayoutPresetButtons(preset);
+            renderDashboard();
+            showNotification(`Dashboard indeling aangepast naar: ${preset.toUpperCase()}!`);
+        }
+
+        function updateLayoutPresetButtons(activePreset) {
+            const presets = ['bento', 'stacked', 'split'];
+            presets.forEach(p => {
+                const btn = document.getElementById(`btn-layout-${p}`);
+                if (p === activePreset) {
+                    btn.classList.add('border-themeAccent', 'ring-2', 'ring-themeAccent/20');
+                } else {
+                    btn.classList.remove('border-themeAccent', 'ring-2', 'ring-themeAccent/20');
+                }
+            });
+        }
+
+        function handleStyleModifierChange(prop, val) {
+            if (prop === 'radius') {
+                customCardRadius = val + 'px';
+                localStorage.setItem('ncs_cardRadius', customCardRadius);
+                document.getElementById('val-radius').textContent = customCardRadius;
+            } else if (prop === 'shadow') {
+                customShadowLevel = val;
+                localStorage.setItem('ncs_shadowLevel', customShadowLevel);
+                document.getElementById('val-shadow').textContent = 'Pro-' + customShadowLevel;
+            }
+            applyStylesModifiersToDOM();
+        }
+
+        function applyStylesModifiersToDOM() {
+            const root = document.documentElement;
+            root.style.setProperty('--card-radius', customCardRadius);
+
+            // Shadow levels presets mapping
+            const shadows = {
+                0: 'none',
+                1: '0 4px 10px -5px rgba(0,0,0,0.1)',
+                2: '0 10px 25px -10px rgba(0,0,0,0.5)',
+                3: '0 20px 40px -15px rgba(0,0,0,0.7)',
+                4: '0 25px 50px -10px rgba(var(--accent-rgb), 0.15)'
+            };
+            root.style.setProperty('--card-shadow', shadows[customShadowLevel]);
+        }
+
+        // --- CUSTOM CURSOR ENGINE ---
+        let cursorMoveHandler = null;
+        function setupCursorTracking() {
+            const cursor = document.getElementById('cursor');
+            const follower = document.getElementById('follower');
+
+            if (cursorPref === 'enabled' && window.matchMedia("(pointer: fine)").matches) {
+                document.documentElement.classList.add('custom-cursor-active');
+                cursor.style.display = 'block';
+                follower.style.display = 'block';
+
+                if (!cursorMoveHandler) {
+                    cursorMoveHandler = (e) => {
+                        cursor.style.left = e.clientX + 'px';
+                        cursor.style.top = e.clientY + 'px';
+                        
+                        setTimeout(() => {
+                            follower.style.left = e.clientX + 'px';
+                            follower.style.top = e.clientY + 'px';
+                        }, 40);
+                    };
+                    document.addEventListener('mousemove', cursorMoveHandler);
+                }
+
+                // Hover interactions on inputs & buttons
+                const interactiveElements = 'a, button, select, input, textarea, [onclick]';
+                document.querySelectorAll(interactiveElements).forEach(el => {
+                    el.addEventListener('mouseenter', () => {
+                        follower.style.width = '36px';
+                        follower.style.height = '36px';
+                        follower.style.backgroundColor = 'rgba(var(--accent-rgb), 0.08)';
+                    });
+                    el.addEventListener('mouseleave', () => {
+                        follower.style.width = '24px';
+                        follower.style.height = '24px';
+                        follower.style.backgroundColor = 'transparent';
+                    });
+                });
+            } else {
+                document.documentElement.classList.remove('custom-cursor-active');
+                cursor.style.display = 'none';
+                follower.style.display = 'none';
+                if (cursorMoveHandler) {
+                    document.removeEventListener('mousemove', cursorMoveHandler);
+                    cursorMoveHandler = null;
+                }
+            }
+        }
+
+        function handleCursorToggle(pref, notify = true) {
+            cursorPref = pref;
+            localStorage.setItem('ncs_cursorPref', pref);
+            setupCursorTracking();
+            if (notify) {
+                showNotification('Cursor instelling opgeslagen!');
+            }
+        }
+
+        // Clock & Greeting
+        function updateClock() {
+            const now = new Date();
+            const days = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
+            const months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+            
+            document.getElementById('currentDate').textContent = `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]}`;
+            document.getElementById('currentTime').textContent = now.toTimeString().split(' ')[0];
+        }
+
+        function updateGreeting() {
+            const hour = new Date().getHours();
+            let greet = "Goedenacht";
+            if (hour >= 6 && hour < 12) greet = "Goedemorgen";
+            else if (hour >= 12 && hour < 18) greet = "Goedemiddag";
+            else if (hour >= 18) greet = "Goedenavond";
+            
+            document.getElementById('greeting').textContent = `${greet}, ${studentName}`;
+        }
+
+        // SPA Navigation logic
+        function switchTab(tabId) {
+            currentTab = tabId;
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.add('hidden'));
+            document.getElementById(`pane-${tabId}`).classList.remove('hidden');
+
+            // Nav buttons styling
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = "nav-btn flex items-center gap-3 px-3.5 py-3 rounded-xl font-semibold text-themeTextMuted hover:text-themeText hover:bg-white/5 transition-all";
+            });
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            activeBtn.className = "nav-btn flex items-center gap-3 px-3.5 py-3 rounded-xl font-semibold text-themeAccent bg-sky-500/10 transition-all";
+
+            // Mobile menu collapse after select
+            document.getElementById('sidebar').classList.add('-translate-x-full');
+
+            // Quick re-renders
+            if(tabId === 'dashboard') {
+                renderDashboard();
+                updateLiveLessonStatus();
+            } else if (tabId === 'grades') {
+                populatePredictorSubjects();
+            }
+        }
+
+        // --- SCHEDULE MATRIX & MANAGEMENT ---
+        function renderScheduleMatrix() {
+            const tbody = document.getElementById('schedule-matrix-body');
+            tbody.innerHTML = '';
+
+            timeslots.forEach(slot => {
+                if(slot.isBreak) {
+                    tbody.innerHTML += `
+                        <tr class="bg-white/[0.01] text-themeTextMuted font-semibold italic text-xs">
+                            <td class="py-2 px-4 border-b border-white/5">${slot.start} - ${slot.end}</td>
+                            <td colspan="5" class="py-2 px-4 text-center tracking-widest border-b border-white/5">${slot.name}</td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                let rowHtml = `<tr class="hover:bg-white/[0.01] transition-colors">
+                    <td class="py-3 px-4 font-mono font-bold text-themeTextMuted border-b border-white/5">
+                        ${slot.id}e uur<br><span class="text-xs font-normal text-themeTextMuted opacity-80">${slot.start}</span>
+                    </td>`;
+
+                for(let day = 1; day <= 5; day++) {
+                    const currentVal = weekSchedule[day][slot.id] || '';
+                    rowHtml += `
+                        <td class="py-2 px-4 border-b border-white/5">
+                            <input type="text" 
+                                value="${currentVal}" 
+                                data-day="${day}" 
+                                data-hour="${slot.id}"
+                                onchange="handleScheduleCellChange(this)"
+                                placeholder="Leeg" 
+                                class="w-full bg-white/5 focus:bg-white/10 border border-transparent rounded-lg px-2 py-1.5 focus:outline-none focus:border-themeAccent text-xs text-themeText transition-all">
+                        </td>
+                    `;
+                }
+
+                rowHtml += `</tr>`;
+                tbody.innerHTML += rowHtml;
+            });
+        }
+
+        function handleScheduleCellChange(element) {
+            const day = element.getAttribute('data-day');
+            const hour = element.getAttribute('data-hour');
+            weekSchedule[day][hour] = element.value;
+        }
+
+        function saveWeekSchedule() {
+            localStorage.setItem('ncs_weekSchedule', JSON.stringify(weekSchedule));
+            showNotification('Weekrooster succesvol opgeslagen!');
+            renderDashboard();
+            updateLiveLessonStatus();
+        }
+
+        // Custom elegant replace for confirm() dialog
+        function showConfirmModal(title, desc, onConfirm) {
+            const modal = document.getElementById('confirm-modal');
+            const box = document.getElementById('confirm-modal-box');
+            
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-desc').textContent = desc;
+            
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            box.classList.remove('scale-90');
+            box.classList.add('scale-100');
+
+            const btnYes = document.getElementById('confirm-btn-yes');
+            const btnCancel = document.getElementById('confirm-btn-cancel');
+
+            const newBtnYes = btnYes.cloneNode(true);
+            const newBtnCancel = btnCancel.cloneNode(true);
+            btnYes.parentNode.replaceChild(newBtnYes, btnYes);
+            btnCancel.parentNode.replaceChild(newBtnCancel, btnCancel);
+
+            newBtnYes.addEventListener('click', () => {
+                onConfirm();
+                closeConfirmModal();
+            });
+
+            newBtnCancel.addEventListener('click', closeConfirmModal);
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirm-modal');
+            const box = document.getElementById('confirm-modal-box');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            box.classList.remove('scale-100');
+            box.classList.add('scale-90');
+        }
+
+        function triggerResetScheduleModal() {
+            showConfirmModal(
+                'Rooster herstellen?',
+                'Weet je zeker dat je het rooster wilt resetten naar de standaardinstellingen? Dit overschrijft alle handmatige aanpassingen.',
+                () => {
+                    weekSchedule = JSON.parse(JSON.stringify(defaultSchedule));
+                    renderScheduleMatrix();
+                    saveWeekSchedule();
+                    showNotification('Rooster hersteld naar standaard!');
+                }
+            );
+        }
+
+        // --- DYNAMIC DASHBOARD WIDGET ENGINE ---
+        function renderDashboard() {
+            const container = document.getElementById('dashboard-widgets-container');
+            container.className = ''; // reset classes
+
+            // Apply global layout styles structures
+            if (activeLayoutPreset === 'stacked') {
+                container.className = 'flex flex-col gap-6 max-w-3xl mx-auto';
+            } else if (activeLayoutPreset === 'split') {
+                container.className = 'grid grid-cols-1 lg:grid-cols-3 gap-6';
+            } else { // Bento Grid
+                container.className = 'grid grid-cols-1 md:grid-cols-3 gap-6';
+            }
+
+            container.innerHTML = '';
+
+            dashboardWidgets.forEach(widget => {
+                if(!widget.visible) return;
+
+                // Configure grid sizing according to preset style
+                let colSizeClass = 'col-span-1';
+                if (activeLayoutPreset === 'bento') {
+                    colSizeClass = widget.size;
+                } else if (activeLayoutPreset === 'split') {
+                    // Split layout divides columns strictly
+                    colSizeClass = (widget.id === 'widget-live-status' || widget.id === 'widget-schedule') ? 'lg:col-span-2' : 'lg:col-span-1';
+                } else {
+                    colSizeClass = 'w-full';
+                }
+
+                let widgetCardHtml = `<div id="${widget.id}" class="${colSizeClass} glass-panel p-6 shadow-md relative overflow-hidden flex flex-col justify-between">`;
+                
+                if (widget.id === 'widget-live-status') {
+                    widgetCardHtml += `
+                        <div id="active-lesson-glow" class="absolute -right-16 -top-16 w-48 h-48 rounded-full bg-themeAccent/10 blur-3xl pointer-events-none"></div>
+                        <div>
+                            <span class="text-xs font-bold text-themeAccent tracking-wider uppercase block mb-1">Status Actueel</span>
+                            <h2 id="live-status-title" class="text-2xl font-black text-themeText">Geen actieve les</h2>
+                            <p id="live-status-time" class="text-sm text-themeTextMuted mt-1">Er is momenteel geen les ingepland.</p>
+                        </div>
+                        <div class="mt-6">
+                            <div class="flex justify-between items-center text-xs text-themeTextMuted mb-2 font-semibold">
+                                <span id="live-progress-text">0% voltooid</span>
+                                <span id="live-time-left">N.v.t.</span>
+                            </div>
+                            <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                                <div id="live-progress-bar" class="bg-gradient-to-r from-themeAccent to-indigo-500 h-full w-0 transition-all duration-1000"></div>
+                            </div>
+                        </div>
+                    `;
+                } else if (widget.id === 'widget-quick-stats') {
+                    widgetCardHtml += `
+                        <div class="flex flex-col h-full justify-between gap-4">
+                            <h3 class="text-xs font-bold tracking-wider text-themeTextMuted uppercase">Focus & Studie</h3>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-white/5 p-4 rounded-2xl text-center">
+                                    <span class="text-[10px] text-themeTextMuted block mb-1 uppercase tracking-wider">Taken Open</span>
+                                    <span id="stat-tasks" class="text-2xl font-extrabold text-indigo-400">0</span>
+                                </div>
+                                <div class="bg-white/5 p-4 rounded-2xl text-center">
+                                    <span class="text-[10px] text-themeTextMuted block mb-1 uppercase tracking-wider">Cijfer Gemiddelde</span>
+                                    <span id="stat-avg" class="text-2xl font-extrabold text-emerald-400">0.0</span>
+                                </div>
+                            </div>
+                            <button onclick="switchTab('timer')" class="w-full py-2 bg-themeAccent hover:opacity-90 text-white font-bold rounded-xl transition-all shadow-md text-xs">
+                                ⏱️ Focus Timer
+                            </button>
+                        </div>
+                    `;
+                } else if (widget.id === 'widget-schedule') {
+                    widgetCardHtml += `
+                        <div class="flex flex-col h-full justify-between">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-sm font-extrabold text-themeText">📅 Programma Vandaag</h3>
+                                <button onclick="switchTab('schedule')" class="text-xs font-bold text-themeAccent hover:underline">Bewerk rooster &rarr;</button>
+                            </div>
+                            <div id="today-schedule-list" class="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                                <!-- Dynamic schedule content -->
+                            </div>
+                        </div>
+                    `;
+                } else if (widget.id === 'widget-tasks') {
+                    widgetCardHtml += `
+                        <div class="flex flex-col h-full justify-between">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-sm font-extrabold text-themeText">📋 Belangrijke Taken</h3>
+                                <button onclick="switchTab('homework')" class="text-xs font-bold text-themeAccent hover:underline">Beheer &rarr;</button>
+                            </div>
+                            <div id="dashboard-tasks-list" class="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                                <!-- Dynamic tasks list -->
+                            </div>
+                        </div>
+                    `;
+                } else if (widget.id === 'widget-scratchpad-preview') {
+                    widgetCardHtml += `
+                        <div class="flex flex-col h-full justify-between">
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="text-sm font-extrabold text-themeText">📝 Kladblok Preview</h3>
+                                <button onclick="switchTab('notes')" class="text-xs font-bold text-themeAccent hover:underline">Open Kladblok &rarr;</button>
+                            </div>
+                            <textarea id="dashboard-notes-textarea" oninput="handleNoteChange(this.value); syncNoteInputs(this.value);" placeholder="Snelnotities..." class="w-full h-24 bg-white/5 border border-white/5 rounded-xl p-3 focus:outline-none focus:border-themeAccent text-xs text-themeText resize-none">${noteContent}</textarea>
+                        </div>
+                    `;
+                }
+
+                widgetCardHtml += `</div>`;
+                container.innerHTML += widgetCardHtml;
+            });
+
+            // Re-render items within the freshly painted widget components
+            renderDashboardSchedule();
+            renderDashboardTasks();
+            updateLiveLessonStatus();
+        }
+
+        // --- WIDGETS LAYOUT CONFIGURATORS PANEL ---
+        function renderWidgetsManagerList() {
+            const list = document.getElementById('widgets-manager-list');
+            list.innerHTML = '';
+
+            dashboardWidgets.forEach((widget, index) => {
+                list.innerHTML += `
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
+                        <div class="flex items-center gap-3">
+                            <button onclick="toggleWidgetVisibility('${widget.id}')" class="p-1.5 rounded-lg hover:bg-white/5 ${widget.visible ? 'text-themeAccent' : 'text-themeTextMuted'}" title="${widget.visible ? 'Verberg widget' : 'Toon widget'}">
+                                ${widget.visible ? `
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                ` : `
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"></path></svg>
+                                `}
+                            </button>
+                            <span class="text-sm font-bold text-themeText ${widget.visible ? '' : 'line-through opacity-55'}">${widget.name}</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button onclick="reorderWidget(${index}, -1)" class="p-1 text-themeTextMuted hover:text-themeText disabled:opacity-20" ${index === 0 ? 'disabled' : ''}>▲</button>
+                            <button onclick="reorderWidget(${index}, 1)" class="p-1 text-themeTextMuted hover:text-themeText disabled:opacity-20" ${index === dashboardWidgets.length - 1 ? 'disabled' : ''}>▼</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function toggleWidgetVisibility(id) {
+            dashboardWidgets = dashboardWidgets.map(w => w.id === id ? { ...w, visible: !w.visible } : w);
+            localStorage.setItem('ncs_dashboardWidgets', JSON.stringify(dashboardWidgets));
+            renderWidgetsManagerList();
+            renderDashboard();
+        }
+
+        function reorderWidget(index, direction) {
+            const targetIndex = index + direction;
+            if (targetIndex < 0 || targetIndex >= dashboardWidgets.length) return;
+
+            const temp = dashboardWidgets[index];
+            dashboardWidgets[index] = dashboardWidgets[targetIndex];
+            dashboardWidgets[targetIndex] = temp;
+
+            localStorage.setItem('ncs_dashboardWidgets', JSON.stringify(dashboardWidgets));
+            renderWidgetsManagerList();
+            renderDashboard();
+        }
+
+        function syncNoteInputs(val) {
+            const notesTextarea = document.getElementById('smart-scratchpad');
+            if(notesTextarea) {
+                notesTextarea.value = val;
+            }
+        }
+
+        // --- DASHBOARD LIVE SCHEDULING INTERNALS ---
+        function renderDashboardSchedule() {
+            const list = document.getElementById('today-schedule-list');
+            if(!list) return;
+            list.innerHTML = '';
+            
+            const now = new Date();
+            const currentDayNum = now.getDay();
+
+            if (currentDayNum === 0 || currentDayNum === 6) {
+                list.innerHTML = `
+                    <div class="text-center py-6 text-themeTextMuted">
+                        <span class="text-2xl block mb-2">🌴</span>
+                        <p class="font-bold text-xs">Heerlijk Weekend!</p>
+                        <p class="text-[10px] opacity-60">Er zijn vandaag geen actieve lessen.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const todayLessons = weekSchedule[currentDayNum] || {};
+            let renderedCount = 0;
+
+            timeslots.forEach(slot => {
+                const isConfiguredHour = !slot.isBreak && (slot.id >= startLesson && slot.id <= endLesson);
+                if (!slot.isBreak && !isConfiguredHour) return;
+
+                const name = slot.isBreak ? slot.name : (todayLessons[slot.id] || 'Vrij lesuur');
+                const isBreak = !!slot.isBreak;
+
+                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                const startMin = timeToMinutes(slot.start);
+                const endMin = timeToMinutes(slot.end);
+                const isActive = currentMinutes >= startMin && currentMinutes < endMin;
+                const isPast = currentMinutes >= endMin;
+
+                list.innerHTML += `
+                    <div class="flex items-center justify-between p-2.5 rounded-xl border transition-all ${
+                        isActive ? 'bg-themeAccent/10 border-themeAccent/30' : 
+                        isPast ? 'bg-white/[0.01] border-transparent opacity-40' : 
+                        'bg-white/5 border-transparent hover:border-white/5'
+                    }">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-[10px] ${
+                                isBreak ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' :
+                                isActive ? 'bg-themeAccent/20 text-themeAccent' : 'bg-white/5 text-themeTextMuted'
+                            }">
+                                ${isBreak ? '☕' : slot.id + 'e'}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-xs ${isActive ? 'text-themeAccent' : 'text-themeText'}">${name}</h4>
+                                <span class="text-[10px] text-themeTextMuted opacity-80 font-mono">${slot.start} - ${slot.end}</span>
+                            </div>
+                        </div>
+                        ${isActive ? '<span class="text-[9px] font-black bg-themeAccent text-white px-2 py-0.5 rounded-full animate-pulse">NU</span>' : ''}
+                    </div>
+                `;
+                renderedCount++;
+            });
+        }
+
+        function updateLiveLessonStatus() {
+            const now = new Date();
+            const currentDayNum = now.getDay();
+            
+            const currentDisplay = document.getElementById('live-status-title');
+            const timeDisplay = document.getElementById('live-status-time');
+            const progressText = document.getElementById('live-progress-text');
+            const progressValText = document.getElementById('live-time-left');
+            const progressBar = document.getElementById('live-progress-bar');
+
+            // Quick exit if widgets not fully loaded in DOM
+            if(!currentDisplay) return;
+
+            if (currentDayNum === 0 || currentDayNum === 6) {
+                currentDisplay.textContent = "Weekend Modus";
+                timeDisplay.textContent = "Heerlijk opladen voor de volgende week.";
+                progressText.textContent = "0% schooltijd voorbij";
+                progressValText.textContent = "Nog 2 dagen vrij";
+                progressBar.style.width = '0%';
+                return;
+            }
+
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            const todayLessons = weekSchedule[currentDayNum] || {};
+
+            let currentSlot = timeslots.find(slot => {
+                const start = timeToMinutes(slot.start);
+                const end = timeToMinutes(slot.end);
+                return currentMinutes >= start && currentMinutes < end;
+            });
+
+            if (currentSlot) {
+                const name = currentSlot.isBreak ? currentSlot.name : (todayLessons[currentSlot.id] || 'Vrij lesuur');
+                const startMin = timeToMinutes(currentSlot.start);
+                const endMin = timeToMinutes(currentSlot.end);
+                const elapsed = currentMinutes - startMin;
+                const duration = endMin - startMin;
+                const progressPercentage = Math.min(100, Math.max(0, (elapsed / duration) * 100));
+
+                currentDisplay.textContent = name;
+                timeDisplay.textContent = `${currentSlot.start} tot ${currentSlot.end} (${currentSlot.isBreak ? 'Pauze' : currentSlot.id + 'e uur'})`;
+                progressText.textContent = `${Math.round(progressPercentage)}% van les verstreken`;
+                progressValText.textContent = `Nog ${endMin - currentMinutes} minuten over`;
+                progressBar.style.width = `${progressPercentage}%`;
+            } else {
+                currentDisplay.textContent = "Geen actieve les";
+                timeDisplay.textContent = "Je hebt momenteel pauze of bent klaar voor vandaag.";
+                progressText.textContent = "Voltooid";
+                progressValText.textContent = "Geniet van de rust";
+                progressBar.style.width = '100%';
+            }
+
+            // Sync quick stats numbers
+            const activeTasks = tasks.filter(t => !t.completed).length;
+            const statsTasksElement = document.getElementById('stat-tasks');
+            if (statsTasksElement) statsTasksElement.textContent = activeTasks;
+
+            calculateStats();
+        }
+
+        // --- STREAMING_CHUNK: Processing homework items and task inputs... ---
+        // --- TASK MANAGER ---
+        function handleAddTask(e) {
+            e.preventDefault();
+            const titleInput = document.getElementById('task-title');
+            const priorityInput = document.getElementById('task-priority');
+            const duedateInput = document.getElementById('task-duedate');
+
+            const newTask = {
+                id: Date.now(),
+                title: titleInput.value,
+                priority: priorityInput.value,
+                dueDate: duedateInput.value,
+                completed: false
+            };
+
+            tasks.push(newTask);
+            localStorage.setItem('ncs_tasks', JSON.stringify(tasks));
+
+            titleInput.value = '';
+            renderTasksList();
+            renderDashboardTasks();
+            updateLiveLessonStatus();
+            showNotification('Taak met succes toegevoegd!');
+        }
+
+        function toggleTaskComplete(id) {
+            tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+            localStorage.setItem('ncs_tasks', JSON.stringify(tasks));
+            renderTasksList();
+            renderDashboardTasks();
+            updateLiveLessonStatus();
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            localStorage.setItem('ncs_tasks', JSON.stringify(tasks));
+            renderTasksList();
+            renderDashboardTasks();
+            updateLiveLessonStatus();
+        }
+
+        function filterTasks(mode) {
+            activeTaskFilter = mode;
+            const btns = ['all', 'pending', 'completed'];
+            btns.forEach(b => {
+                const btn = document.getElementById(`filter-${b}`);
+                if (b === mode) {
+                    btn.className = "px-3 py-1 bg-themeAccent/20 text-themeAccent font-bold rounded-lg text-xs";
+                } else {
+                    btn.className = "px-3 py-1 hover:bg-white/5 text-themeTextMuted hover:text-themeText font-semibold rounded-lg text-xs";
+                }
+            });
+            renderTasksList();
+        }
+
+        function renderTasksList() {
+            const list = document.getElementById('full-tasks-list');
+            if(!list) return;
+            list.innerHTML = '';
+
+            let filtered = tasks;
+            if (activeTaskFilter === 'pending') filtered = tasks.filter(t => !t.completed);
+            if (activeTaskFilter === 'completed') filtered = tasks.filter(t => t.completed);
+
+            if(filtered.length === 0) {
+                list.innerHTML = `<div class="text-center py-12 text-themeTextMuted text-sm">Geen taken gevonden voor dit filter.</div>`;
+                return;
+            }
+
+            filtered.sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+            filtered.forEach(t => {
+                const prioColors = {
+                    Laag: 'text-emerald-400 bg-emerald-500/10',
+                    Medium: 'text-yellow-400 bg-yellow-500/10',
+                    Hoog: 'text-rose-400 bg-rose-500/10'
+                };
+
+                const dateStr = new Date(t.dueDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
+
+                list.innerHTML += `
+                    <div class="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-transparent hover:border-white/10 transition-all ${t.completed ? 'opacity-60' : ''}">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTaskComplete(${t.id})" class="w-5 h-5 rounded-lg border-2 border-themeAccent text-themeAccent bg-transparent focus:ring-0">
+                            <div>
+                                <h4 class="font-bold text-sm ${t.completed ? 'line-through text-themeTextMuted' : 'text-themeText'}">${t.title}</h4>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded ${prioColors[t.priority]}">${t.priority}</span>
+                                    <span class="text-xs text-themeTextMuted font-medium">Deadline: ${dateStr}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="deleteTask(${t.id})" class="text-themeTextMuted hover:text-rose-500 p-2 rounded-lg hover:bg-rose-500/5 transition-all">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        function renderDashboardTasks() {
+            const list = document.getElementById('dashboard-tasks-list');
+            if(!list) return;
+            list.innerHTML = '';
+
+            const pending = tasks.filter(t => !t.completed);
+            pending.sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+            const sliced = pending.slice(0, 4);
+
+            if(sliced.length === 0) {
+                list.innerHTML = `<div class="text-center py-6 text-themeTextMuted text-xs">🎉 Super! Alle taken zijn compleet.</div>`;
+                return;
+            }
+
+            sliced.forEach(t => {
+                const due = new Date(t.dueDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
+                list.innerHTML += `
+                    <div class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 hover:bg-white/[0.08] transition-all">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-2 h-2 rounded-full ${t.priority === 'Hoog' ? 'bg-rose-500' : t.priority === 'Medium' ? 'bg-yellow-500' : 'bg-emerald-500'}"></span>
+                            <span class="font-bold text-xs text-themeText block max-w-[150px] truncate">${t.title}</span>
+                        </div>
+                        <span class="text-[10px] text-themeTextMuted font-mono font-semibold">${due}</span>
+                    </div>
+                `;
+            });
+        }
+
+        // --- CIJFER TRACKER ---
+        function handleAddGrade(e) {
+            e.preventDefault();
+            const subjectInput = document.getElementById('grade-subject');
+            const gradeVal = parseFloat(document.getElementById('grade-val').value);
+            const weightVal = parseFloat(document.getElementById('grade-weight').value);
+
+            if (isNaN(gradeVal) || gradeVal < 1.0 || gradeVal > 10.0) {
+                showNotification('Vul een geldig cijfer in tussen 1.0 en 10.0');
+                return;
+            }
+
+            const newGrade = {
+                id: Date.now(),
+                subject: subjectInput.value.trim(),
+                val: gradeVal,
+                weight: weightVal
+            };
+
+            grades.push(newGrade);
+            localStorage.setItem('ncs_grades', JSON.stringify(grades));
+
+            subjectInput.value = '';
+            document.getElementById('grade-val').value = '';
+            document.getElementById('grade-weight').value = '1.0';
+
+            renderGrades();
+            calculateStats();
+            populatePredictorSubjects();
+            showNotification('Cijfer succesvol geregistreerd!');
+        }
+
+        function deleteGrade(id) {
+            grades = grades.filter(g => g.id !== id);
+            localStorage.setItem('ncs_grades', JSON.stringify(grades));
+            renderGrades();
+            calculateStats();
+            populatePredictorSubjects();
+        }
+
+        function calculateStats() {
+            const statAvgEl = document.getElementById('stat-avg');
+            const overallDisplay = document.getElementById('overall-average-display');
+
+            if (grades.length === 0) {
+                if (statAvgEl) statAvgEl.textContent = '0.0';
+                if (overallDisplay) overallDisplay.textContent = 'Gemiddelde: 0.0';
+                return;
+            }
+
+            let sum = 0;
+            let weightSum = 0;
+
+            grades.forEach(g => {
+                sum += g.val * g.weight;
+                weightSum += g.weight;
+            });
+
+            const overallAvg = (sum / weightSum).toFixed(2);
+            if (statAvgEl) statAvgEl.textContent = overallAvg;
+            if (overallDisplay) overallDisplay.textContent = `Gemiddelde: ${overallAvg}`;
+        }
+
+        function populatePredictorSubjects() {
+            const select = document.getElementById('predict-subject-select');
+            if(!select) return;
+            select.innerHTML = '';
+            
+            const uniqueSubjects = [...new Set(grades.map(g => g.subject))];
+            
+            if(uniqueSubjects.length === 0) {
+                select.innerHTML = '<option value="">Voeg eerst cijfers toe...</option>';
+                return;
+            }
+
+            uniqueSubjects.forEach(subject => {
+                select.innerHTML += `<option value="${subject}">${subject}</option>`;
+            });
+        }
+
+        function calculateTargetGrade() {
+            const subject = document.getElementById('predict-subject-select').value;
+            const targetAvg = parseFloat(document.getElementById('predict-target-avg').value);
+            const nextWeight = parseFloat(document.getElementById('predict-next-weight').value);
+            const resultBox = document.getElementById('prediction-result');
+
+            if(!subject || isNaN(targetAvg) || isNaN(nextWeight)) {
+                showNotification('Selecteer een vak en vul alle gegevens correct in.');
+                return;
+            }
+
+            const subjectGrades = grades.filter(g => g.subject === subject);
+            
+            let currentSum = 0;
+            let currentWeightSum = 0;
+
+            subjectGrades.forEach(g => {
+                currentSum += g.val * g.weight;
+                currentWeightSum += g.weight;
+            });
+
+            const neededGrade = ((targetAvg * (currentWeightSum + nextWeight)) - currentSum) / nextWeight;
+
+            resultBox.classList.remove('hidden');
+            if (neededGrade <= 1.0) {
+                resultBox.innerHTML = `Je hebt minimaal een <strong class="text-base font-black">1.0</strong> nodig. Je staat er al super goed voor!`;
+            } else if (neededGrade > 10.0) {
+                resultBox.innerHTML = `Voor een ${targetAvg} gemiddeld heb je een <strong class="text-rose-500 font-black text-base">${neededGrade.toFixed(1)}</strong> nodig. Dit is onmogelijk met één toets!`;
+            } else {
+                resultBox.innerHTML = `Je moet een <strong class="text-sm font-black text-themeAccent">${neededGrade.toFixed(1)}</strong> halen om een ${targetAvg} gemiddeld te staan.`;
+            }
+        }
+
+        function renderGrades() {
+            const tbody = document.getElementById('grades-list-body');
+            const averagesGrid = document.getElementById('grades-subject-averages');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            averagesGrid.innerHTML = '';
+
+            if (grades.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-themeTextMuted">Nog geen cijfers ingevoerd.</td></tr>`;
+                return;
+            }
+
+            grades.forEach(g => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-white/[0.02]">
+                        <td class="py-3 px-3 font-bold text-themeText">${g.subject}</td>
+                        <td class="py-3 px-3 font-mono font-bold ${g.val >= 5.5 ? 'text-emerald-400' : 'text-rose-400'}">${g.val.toFixed(1)}</td>
+                        <td class="py-3 px-3 text-themeTextMuted">${g.weight}x</td>
+                        <td class="py-3 px-3 text-right">
+                            <button onclick="deleteGrade(${g.id})" class="text-themeTextMuted hover:text-rose-500 p-1.5 rounded-lg transition-all">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            const subjectMap = {};
+            grades.forEach(g => {
+                if(!subjectMap[g.subject]) {
+                    subjectMap[g.subject] = { sum: 0, weight: 0 };
+                }
+                subjectMap[g.subject].sum += g.val * g.weight;
+                subjectMap[g.subject].weight += g.weight;
+            });
+
+            Object.keys(subjectMap).forEach(subj => {
+                const data = subjectMap[subj];
+                const avg = (data.sum / data.weight).toFixed(1);
+                averagesGrid.innerHTML += `
+                    <div class="bg-white/5 p-3 rounded-2xl flex justify-between items-center border border-transparent">
+                        <span class="text-xs font-semibold text-themeText block max-w-[70%] truncate">${subj}</span>
+                        <span class="text-sm font-bold ${avg >= 5.5 ? 'text-emerald-400' : 'text-rose-400'}">${avg}</span>
+                    </div>
+                `;
+            });
+        }
+
+        // --- FLASHCARDS TOOL ---
+        function handleAddFlashcard(e) {
+            e.preventDefault();
+            const category = document.getElementById('fc-category').value.trim();
+            const front = document.getElementById('fc-front').value.trim();
+            const back = document.getElementById('fc-back').value.trim();
+
+            const newCard = {
+                id: Date.now(),
+                category: category,
+                front: front,
+                back: back
+            };
+
+            flashcards.push(newCard);
+            localStorage.setItem('ncs_flashcards', JSON.stringify(flashcards));
+
+            document.getElementById('fc-front').value = '';
+            document.getElementById('fc-back').value = '';
+
+            renderFlashcards();
+            showNotification('Flitskaart succesvol toegevoegd!');
+        }
+
+        function deleteFlashcard(id, event) {
+            event.stopPropagation(); // Avoid card flipping upon deletion click
+            flashcards = flashcards.filter(c => c.id !== id);
+            localStorage.setItem('ncs_flashcards', JSON.stringify(flashcards));
+            renderFlashcards();
+        }
+
+        function renderFlashcards() {
+            const grid = document.getElementById('flashcard-grid');
+            const counter = document.getElementById('fc-counter');
+            if(!grid) return;
+            grid.innerHTML = '';
+            counter.textContent = `${flashcards.length} Kaarten`;
+
+            if(flashcards.length === 0) {
+                grid.innerHTML = `<div class="col-span-2 text-center py-12 text-themeTextMuted">Nog geen flitskaarten aangemaakt.</div>`;
+                return;
+            }
+
+            flashcards.forEach(card => {
+                grid.innerHTML += `
+                    <div class="perspective w-full h-48 cursor-pointer" onclick="flipCard(${card.id})">
+                        <div id="fc-inner-${card.id}" class="preserve-3d relative w-full h-full border border-white/5 rounded-2xl bg-white/5 shadow-md">
+                            
+                            <!-- Front side -->
+                            <div class="backface-hidden absolute inset-0 p-5 flex flex-col justify-between">
+                                <div class="flex justify-between items-start">
+                                    <span class="text-[10px] uppercase font-bold tracking-widest text-themeAccent px-2.5 py-1 bg-sky-500/10 rounded-full">${card.category}</span>
+                                    <button onclick="deleteFlashcard(${card.id}, event)" class="text-themeTextMuted hover:text-rose-500 p-1.5 rounded-lg transition-all" title="Verwijder kaart">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                </div>
+                                <h4 class="text-base font-bold text-themeText mt-2">${card.front}</h4>
+                                <span class="text-[9px] text-themeTextMuted text-center font-bold block select-none">KLIK OM OM TE DRAAIEN 🔄</span>
+                            </div>
+
+                            <!-- Back side -->
+                            <div class="backface-hidden rotate-y-180 absolute inset-0 p-5 flex flex-col justify-between rounded-2xl bg-white/[0.02]">
+                                <span class="text-[10px] uppercase font-bold tracking-widest text-indigo-400 px-2.5 py-1 bg-indigo-500/10 rounded-full w-fit">Antwoord</span>
+                                <p class="text-xs font-medium text-themeText overflow-y-auto mt-2 mb-1">${card.back}</p>
+                                <span class="text-[9px] text-themeTextMuted text-center font-bold block select-none">KLIK OM OM TE DRAAIEN 🔄</span>
+                            </div>
+
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function flipCard(id) {
+            const inner = document.getElementById(`fc-inner-${id}`);
+            if(inner) {
+                inner.classList.toggle('rotate-y-180');
+            }
+        }
+
+        // --- SMART NOTES TRACKER ---
+        function handleNoteChange(val) {
+            noteContent = val;
+            localStorage.setItem('ncs_noteContent', val);
+            updateNoteCounters();
+
+            // sync with the alternative input if on dashboard
+            const dashboardNotesInput = document.getElementById('dashboard-notes-textarea');
+            if (dashboardNotesInput && dashboardNotesInput.value !== val) {
+                dashboardNotesInput.value = val;
+            }
+        }
+
+        function updateNoteCounters() {
+            const text = noteContent.trim();
+            const charCount = text.length;
+            const wordCount = text === '' ? 0 : text.split(/\s+/).length;
+
+            const charCountEl = document.getElementById('note-char-count');
+            const wordCountEl = document.getElementById('note-word-count');
+            if (charCountEl) charCountEl.textContent = charCount;
+            if (wordCountEl) wordCountEl.textContent = wordCount;
+        }
+
+        function downloadNotes() {
+            if(noteContent.trim() === '') {
+                showNotification('Typ eerst wat aantekeningen om te downloaden!');
+                return;
+            }
+            try {
+                const blob = new Blob([noteContent], {type: "text/plain;charset=utf-8"});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `studie_notities_${new Date().toISOString().slice(0, 10)}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showNotification('Aantekeningen succesvol geëxporteerd!');
+            } catch(e) {
+                showNotification('Exporteren mislukt door browserbeveiliging.');
+            }
+        }
+
+        // --- FOCUS TIMER (POMODORO) ---
+        function setTimerMode(mode) {
+            timerMode = mode;
+            timerSecondsLeft = timerDurations[mode];
+            
+            const modes = ['study', 'short', 'long'];
+            modes.forEach(m => {
+                const btn = document.getElementById(`btn-mode-${m}`);
+                if (m === mode) {
+                    btn.className = "flex-1 py-2 text-xs font-bold rounded-xl text-themeAccent bg-sky-500/10 transition-all";
+                } else {
+                    btn.className = "flex-1 py-2 text-xs font-bold rounded-xl text-themeTextMuted hover:text-themeText transition-all";
+                }
+            });
+
+            const ring = document.getElementById('timer-progress-ring');
+            if (mode === 'study') {
+                ring.className = 'text-themeAccent';
+                document.getElementById('timer-status').textContent = 'Studeer-tijd';
+            } else {
+                ring.className = 'text-emerald-500';
+                document.getElementById('timer-status').textContent = 'Pauzeer-tijd';
+            }
+
+            updateTimerDisplay();
+            if(timerIsRunning) {
+                toggleTimer(); // Stop timer if running when switching
+            }
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(timerSecondsLeft / 60);
+            const secs = timerSecondsLeft % 60;
+            document.getElementById('timer-display').textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+            const max = timerDurations[timerMode];
+            const ring = document.getElementById('timer-progress-ring');
+            const circumference = 2 * Math.PI * 110; // 691.15
+            const offset = circumference - (timerSecondsLeft / max) * circumference;
+            ring.style.strokeDashoffset = offset;
+        }
+
+        function toggleTimer() {
+            const btn = document.getElementById('btn-timer-toggle');
+            if (timerIsRunning) {
+                clearInterval(timerInterval);
+                timerIsRunning = false;
+                btn.textContent = 'Start';
+                btn.className = "px-6 py-3 bg-themeAccent hover:opacity-90 text-white font-extrabold rounded-xl transition-all shadow-lg text-sm min-w-[100px]";
+            } else {
+                timerIsRunning = true;
+                btn.textContent = 'Pauze';
+                btn.className = "px-6 py-3 bg-rose-500 hover:bg-rose-600 text-white font-extrabold rounded-xl transition-all shadow-lg text-sm min-w-[100px]";
+                
+                timerInterval = setInterval(() => {
+                    if (timerSecondsLeft > 0) {
+                        timerSecondsLeft--;
+                        updateTimerDisplay();
+                    } else {
+                        clearInterval(timerInterval);
+                        timerIsRunning = false;
+                        btn.textContent = 'Start';
+                        showNotification('Focus Timer voltooid! Goed gewerkt.');
+                        try {
+                            const context = new (window.AudioContext || window.webkitAudioContext)();
+                            const osc = context.createOscillator();
+                            osc.type = 'sine';
+                            osc.frequency.setValueAtTime(800, context.currentTime);
+                            osc.connect(context.destination);
+                            osc.start();
+                            osc.stop(context.currentTime + 1.2);
+                        } catch(e){}
+                        
+                        if(timerMode === 'study') {
+                            setTimerMode('short');
+                        } else {
+                            setTimerMode('study');
+                        }
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetTimer() {
+            if(timerIsRunning) {
+                toggleTimer();
+            }
+            timerSecondsLeft = timerDurations[timerMode];
+            updateTimerDisplay();
+        }
+
+        // --- SYSTEM SETTINGS SAVE ---
+        function saveGlobalSettings() {
+            studentName = document.getElementById('studentNameInput').value.trim() || 'Student';
+            startLesson = parseInt(document.getElementById('startLesson').value);
+            endLesson = parseInt(document.getElementById('endLesson').value);
+
+            localStorage.setItem('ncs_studentName', studentName);
+            localStorage.setItem('ncs_startLesson', startLesson);
+            localStorage.setItem('ncs_endLesson', endLesson);
+
+            updateGreeting();
+            updateLiveLessonStatus();
+            renderDashboard();
+            showNotification('Systeeminstellingen succesvol bijgewerkt!');
+            switchTab('dashboard');
+        }
+
+        // Helper time converter
+        function timeToMinutes(timeStr) {
+            const [hrs, mins] = timeStr.split(':').map(Number);
+            return hrs * 60 + mins;
+        }
+
+        // Beautiful custom toast notification
+        function showNotification(message) {
+            const toast = document.createElement('div');
+            toast.className = "fixed bottom-5 right-5 glass-panel border border-themeAccent/20 shadow-xl px-6 py-3.5 rounded-2xl text-sm font-bold text-themeText z-50 flex items-center gap-3 transition-all duration-300 transform translate-y-10 opacity-0 bg-opacity-95";
+            toast.innerHTML = `
+                <span class="text-themeAccent">⚡</span>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
 </body>
 </html>
