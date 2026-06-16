@@ -1,1 +1,719 @@
-bom
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesrooster</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            cursor: none !important;
+        }
+
+        :root {
+            --bg: #050505;
+            --sidebar-bg: rgba(10, 10, 15, 0.9);
+            --card-bg: rgba(20, 20, 25, 0.6);
+            --accent: #0ea5e9;
+            --accent-glow: rgba(14, 165, 233, 0.3);
+            --text-main: #f9fafb;
+            --text-muted: #6b7280;
+            --border: rgba(255, 255, 255, 0.1);
+            --border-light: rgba(255, 255, 255, 0.05);
+            --success: #10b981;
+            --danger: #ef4444;
+            --glass: rgba(255, 255, 255, 0.02);
+        }
+
+        body {
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.15) 0px, transparent 40%),
+                radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 40%),
+                radial-gradient(at 50% 100%, rgba(236, 72, 153, 0.05) 0px, transparent 40%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+        }
+
+        /* Speciale Muis Styles */
+        .custom-cursor {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 11000;
+            will-change: transform;
+        }
+
+        .cursor-follower {
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--accent);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 10999;
+            transition: transform 0.15s ease-out, width 0.3s, height 0.3s, background 0.3s, border 0.3s;
+            will-change: transform;
+        }
+
+        .cursor-hover {
+            width: 60px;
+            height: 60px;
+            background: var(--accent-glow);
+            border: 1px solid var(--accent);
+        }
+
+        /* --- Dashboard Layout --- */
+        .app-container {
+            display: flex;
+            width: 100%;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #0a0a0f;
+            color: var(--text-main);
+            padding: 40px;
+            border-radius: 28px;
+            border: 1px solid var(--border);
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border-light);
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        /* Responsiviteit voor tablets en telefoons */
+        @media (max-width: 1024px) {
+            .dashboard-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .app-container { flex-direction: column; }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 20px;
+                border-right: none;
+                border-bottom: 1px solid var(--border-light);
+            }
+            .brand { margin-bottom: 20px; }
+            .main-content { padding: 30px 20px; }
+            .dashboard-grid { grid-template-columns: 1fr; gap: 15px; }
+            .card-4, .card-2, .card-3, .card-6 { grid-column: span 1; }
+            .welcome-title { font-size: 32px; }
+        }
+
+        /* Verberg custom cursor op touch-apparaten */
+        @media (pointer: coarse) {
+            .custom-cursor, .cursor-follower { display: none !important; }
+            * { cursor: auto !important; }
+        }
+
+        .brand {
+            font-size: 22px;
+            font-weight: 1000;
+            color: var(--accent);
+            letter-spacing: -1.5px;
+            margin-bottom: 60px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 14px 20px;
+            border-radius: 16px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--glass);
+            color: var(--accent);
+            transform: translateX(5px);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 60px;
+            max-width: 1400px;
+            overflow-y: auto;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-auto-rows: auto;
+            gap: 24px;
+            margin-top: 30px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(30px) saturate(200%);
+            border: 1px solid var(--border-light);
+            border-radius: 32px;
+            padding: 30px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.03);
+            box-shadow: 0 20px 40px -20px var(--accent-glow);
+        }
+
+        /* Bento Layout Sizing */
+        .card-4 { grid-column: span 4; }
+        .card-2 { grid-column: span 2; }
+        .card-3 { grid-column: span 3; }
+        .card-6 { grid-column: span 6; }
+
+        .welcome-title {
+            font-size: 42px;
+            font-weight: 900;
+            letter-spacing: -2px;
+            margin-bottom: 10px;
+        }
+
+        /* --- Live Status Widget --- */
+        .current-lesson {
+            background: linear-gradient(165deg, var(--accent) 0%, #6366f1 100%);
+            color: white;
+            border: none;
+        }
+
+        .current-lesson::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .current-lesson-name {
+            font-size: 32px;
+            font-weight: 1000;
+            letter-spacing: -1px;
+        }
+
+        /* --- Task Manager --- */
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            margin-bottom: 10px;
+            border: 1px solid transparent;
+            transition: 0.2s;
+        }
+
+        .task-item:hover {
+            border-color: var(--accent);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .task-check {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            border: 2px solid var(--accent);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .task-check.checked {
+            background: var(--accent);
+            position: relative;
+        }
+
+        .task-check.checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 12px;
+        }
+
+        /* --- Settings Inputs Pro --- */
+        .color-picker-grid {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .color-circle {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .color-circle.active { border-color: white; }
+
+        .modal-title {
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 30px;
+            color: var(--accent);
+        }
+
+        .setting-group { margin-bottom: 25px; }
+
+        .setting-label {
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            display: block;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+
+        .setting-input, .setting-select {
+            width: 100%;
+            padding: 14px 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            color: white;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        .setting-input:focus, .setting-select:focus { border-color: var(--accent); }
+
+        .modal-footer {
+            display: flex;
+            gap: 15px;
+            margin-top: 40px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border-radius: 14px;
+            border: none;
+            font-weight: 800;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-save { background: var(--accent); color: white; }
+        .btn-cancel { background: rgba(255,255,255,0.1); color: white; }
+        
+        /* --- Task Manager Improvements --- */
+        .task-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .task-input-group .setting-input {
+            flex: 1;
+            padding: 12px;
+        }
+        
+        .task-list-container {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .task-item span {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .task-item.completed span {
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+
+        .delete-task {
+            color: var(--danger);
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .btn:hover { transform: translateY(-2px); opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="custom-cursor" id="cursor"></div>
+        <div class="cursor-follower" id="follower"></div>
+
+        <nav class="sidebar">
+            <div class="brand">⚡ NCS OEFENHUB</div>
+            <a href="#" class="nav-item active">🏠 Overzicht</a>
+            <a href="#" class="nav-item" onclick="openSettings()">⚙️ Systeem</a>
+            <div style="font-size: 10px; color: var(--text-muted); text-align: center; margin-top: 20px; font-weight: 800; letter-spacing: 1px;">
+                NAIM CLOUD SOFTWARE
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <header class="welcome-header">
+                <div class="welcome-title" id="greeting">Goedenavond, Student</div>
+                <div class="quote-box" id="quote">"De toekomst hangt af van wat je vandaag doet."</div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Live Progress (Focus) -->
+                <div class="card card-4" id="currentLessonDisplay">
+                    <!-- Dynamisch gevuld -->
+                </div>
+
+                <!-- System Clock -->
+                <div class="card card-2" style="text-align: center; display: flex; flex-direction: column; justify-content: center;">
+                    <div style="font-size: 12px; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Realtime</div>
+                    <div style="font-size: 38px; font-weight: 1000; color: var(--accent); margin: 5px 0;" id="currentTime">00:00:00</div>
+                    <div id="currentDate" style="font-size: 14px; font-weight: 600; color: var(--text-muted);">Laden...</div>
+                </div>
+
+                <!-- Schedule -->
+                <div class="card card-4">
+                    <h3 style="margin-bottom: 25px; font-size: 18px; font-weight: 900;">📅 VOLGENDE LESSEN</h3>
+                    <div id="schedule"></div>
+                </div>
+
+                <!-- Tasks -->
+                <div class="card card-2">
+                    <h3 style="margin-bottom: 20px; font-size: 18px; font-weight: 900;">📋 TAKEN</h3>
+                    <div class="task-input-group">
+                        <input type="text" id="newTask" class="setting-input" placeholder="Nieuwe taak..." style="padding: 10px;">
+                        <button class="btn btn-save" style="padding: 0 15px;" onclick="addTask()">+</button>
+                    </div>
+                    <div id="taskList" class="task-list-container">
+                        <!-- Dynamisch -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-title">NCS SYSTEEM CONFIGURATIE</div>
+            
+            <div class="setting-group">
+                <label class="setting-label">Naam Student</label>
+                <input type="text" id="studentNameInput" class="setting-input" placeholder="Je naam...">
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Thema Kleur</label>
+                <div class="color-picker-grid">
+                    <div class="color-circle" style="background: #0ea5e9;" onclick="setAccent('#0ea5e9')"></div>
+                    <div class="color-circle" style="background: #ec4899;" onclick="setAccent('#ec4899')"></div>
+                    <div class="color-circle" style="background: #f59e0b;" onclick="setAccent('#f59e0b')"></div>
+                    <div class="color-circle" style="background: #10b981;" onclick="setAccent('#10b981')"></div>
+                    <div class="color-circle" style="background: #a855f7;" onclick="setAccent('#a855f7')"></div>
+                    <div class="color-circle" style="background: #f97316;" onclick="setAccent('#f97316')"></div>
+                    <div class="color-circle" style="background: #84cc16;" onclick="setAccent('#84cc16')"></div>
+                    <div class="color-circle" style="background: #06b6d4;" onclick="setAccent('#06b6d4')"></div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="setting-group">
+                    <label class="setting-label">Start Schooltijd</label>
+                    <select class="setting-select" id="startLesson">
+                        <option value="1">1e uur (08:30)</option>
+                        <option value="2">2e uur (09:20)</option>
+                        <option value="3">3e uur (10:35)</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">Eind Schooltijd</label>
+                    <select class="setting-select" id="endLesson">
+                        <option value="6">6e uur (14:25)</option>
+                        <option value="7">7e uur (15:15)</option>
+                        <option value="8">8e uur (16:05)</option>
+                    </select>
+                </div>
+            </div>
+
+            <label class="setting-label">Vakken Beheer</label>
+            <div class="subject-input-grid" id="subjectInputs" style="margin-bottom: 20px;"></div>
+
+            <div class="modal-footer">
+                <button class="btn btn-save" onclick="saveSettings()">OPSLAAN</button>
+                <button class="btn btn-cancel" onclick="closeSettings()">ANNULEREN</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentAccent = localStorage.getItem('accentColor') || '#0ea5e9';
+        let studentName = localStorage.getItem('studentName') || 'Student';
+        let startLesson = 1;
+        let endLesson = 8;
+        let subjectNames = {};
+
+        const schedule = [
+            { name: '1e lesuur', start: '08:30', end: '09:20', type: 'lesson', lessonNum: 1 },
+            { name: '2e lesuur', start: '09:20', end: '10:10', type: 'lesson', lessonNum: 2 },
+            { name: 'Pauze', start: '10:10', end: '10:35', type: 'break' },
+            { name: '3e lesuur', start: '10:35', end: '11:25', type: 'lesson', lessonNum: 3 },
+            { name: '4e lesuur', start: '11:25', end: '12:15', type: 'lesson', lessonNum: 4 },
+            { name: 'Pauze', start: '12:15', end: '12:45', type: 'break' },
+            { name: '5e lesuur', start: '12:45', end: '13:35', type: 'lesson', lessonNum: 5 },
+            { name: '6e lesuur', start: '13:35', end: '14:25', type: 'lesson', lessonNum: 6 },
+            { name: '7e lesuur', start: '14:25', end: '15:15', type: 'lesson', lessonNum: 7 },
+            { name: '8e lesuur', start: '15:15', end: '16:05', type: 'lesson', lessonNum: 8 }
+        ];
+
+        function setAccent(color) {
+            document.documentElement.style.setProperty('--accent', color);
+            document.documentElement.style.setProperty('--accent-glow', color + '4D');
+            localStorage.setItem('accentColor', color);
+        }
+
+        function updateGreeting() {
+            const hour = new Date().getHours();
+            let greetingPrefix = "Goedenacht";
+            if (hour >= 5 && hour < 12) greetingPrefix = "Goedemorgen";
+            else if (hour >= 12 && hour < 18) greetingPrefix = "Goedemiddag";
+            else if (hour >= 18) greetingPrefix = "Goedenavond";
+            document.getElementById('greeting').textContent = `${greetingPrefix}, ${studentName}`;
+        }
+
+        // Task Manager Logic
+        let tasks = JSON.parse(localStorage.getItem('ncsTasks')) || [];
+        
+        function addTask() {
+            const input = document.getElementById('newTask');
+            if (!input.value.trim()) return;
+            tasks.push({ text: input.value, completed: false });
+            input.value = '';
+            renderTasks();
+        }
+
+        function toggleTask(index) {
+            tasks[index].completed = !tasks[index].completed;
+            renderTasks();
+        }
+
+        function deleteTask(index) {
+            tasks.splice(index, 1);
+            renderTasks();
+        }
+
+        function renderTasks() {
+            localStorage.setItem('ncsTasks', JSON.stringify(tasks));
+            const list = document.getElementById('taskList');
+            list.innerHTML = tasks.map((task, i) => `
+                <div class="task-item ${task.completed ? 'completed' : ''}">
+                    <div class="task-check ${task.completed ? 'checked' : ''}" onclick="toggleTask(${i})"></div>
+                    <span>${task.text}</span>
+                    <div class="delete-task" onclick="deleteTask(${i})">×</div>
+                </div>
+            `).join('');
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('scheduleSettings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                startLesson = settings.startLesson || 1;
+                endLesson = settings.endLesson || 8;
+                subjectNames = settings.subjectNames || {};
+                studentName = settings.studentName || 'Student';
+            }
+            
+            const container = document.getElementById('subjectInputs');
+            container.innerHTML = '';
+            for(let i = 1; i <= 8; i++) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'setting-input';
+                input.id = `subjectName_${i}`;
+                input.placeholder = `${i}e uur: ${subjectNames[i] || 'Leeg'}`;
+                input.value = subjectNames[i] || '';
+                container.appendChild(input);
+            }
+
+            document.getElementById('startLesson').value = startLesson;
+            document.getElementById('endLesson').value = endLesson;
+            document.getElementById('studentNameInput').value = studentName;
+        }
+
+        function openSettings() { document.getElementById('settingsModal').classList.add('show'); }
+        function closeSettings() { document.getElementById('settingsModal').classList.remove('show'); }
+
+        function saveSettings() {
+            startLesson = parseInt(document.getElementById('startLesson').value);
+            endLesson = parseInt(document.getElementById('endLesson').value);
+            studentName = document.getElementById('studentNameInput').value || 'Student';
+
+            for(let i = 1; i <= 8; i++) {
+                subjectNames[i] = document.getElementById(`subjectName_${i}`).value;
+            }
+            localStorage.setItem('studentName', studentName);
+            localStorage.setItem('scheduleSettings', JSON.stringify({ startLesson, endLesson, subjectNames, studentName }));
+            closeSettings();
+            updateGreeting();
+            updateSchedule();
+        }
+
+        function timeToMinutes(time) {
+            const [h, m] = time.split(':').map(Number);
+            return h * 60 + m;
+        }
+
+        function getDisplayName(item) {
+            if (item.type === 'break') return item.name;
+            return subjectNames[item.lessonNum] || item.name;
+        }
+
+        function updateSchedule() {
+            const now = new Date();
+            const dayNames = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
+            const monthNames = ['Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni', 'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December'];
+            
+            document.getElementById('currentDate').textContent = `${dayNames[now.getDay()]} ${now.getDate()} ${monthNames[now.getMonth()]}`;
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('currentTime').textContent = `${hours}:${minutes}:${seconds}`;
+
+            if (now.getDay() === 0 || now.getDay() === 6) {
+                document.getElementById('currentLessonDisplay').innerHTML = '<div style="font-size: 24px; font-weight: 900;">🏠 WEEKEND MODE</div>';
+                document.getElementById('schedule').innerHTML = '';
+                return;
+            }
+
+            const currentMinutes = timeToMinutes(`${hours}:${minutes}`);
+            const filteredSchedule = schedule.filter(item => item.type === 'break' || (item.lessonNum >= startLesson && item.lessonNum <= endLesson));
+
+            let currentLesson = filteredSchedule.find(item => {
+                const start = timeToMinutes(item.start);
+                const end = timeToMinutes(item.end);
+                return currentMinutes >= start && currentMinutes < end;
+            });
+
+            const currentDisplay = document.getElementById('currentLessonDisplay');
+            if (currentLesson) {
+                const startMin = timeToMinutes(currentLesson.start);
+                const endMin = timeToMinutes(currentLesson.end);
+                const progress = ((currentMinutes - startMin) / (endMin - startMin)) * 100;
+                currentDisplay.innerHTML = `
+                    <div style="font-size: 14px; font-weight: 800; opacity: 0.8; margin-bottom: 10px;">HUIDIGE STATUS</div>
+                    <div class="current-lesson-name">${getDisplayName(currentLesson)}</div>
+                    <div style="font-size: 18px; font-weight: 700; margin-top: 5px;">${currentLesson.start} - ${currentLesson.end}</div>
+                    <div style="background: rgba(255,255,255,0.2); height: 10px; border-radius: 5px; margin-top: 25px; overflow: hidden;">
+                        <div style="width: ${progress}%; background: white; height: 100%; transition: 0.5s;"></div>
+                    </div>
+                    <div style="margin-top: 15px; font-weight: 900;">NOG ${endMin - currentMinutes} MINUTEN</div>
+                `;
+            } else {
+                currentDisplay.innerHTML = `<div style="font-size: 24px; font-weight: 900;">✨ GEEN LES OP DIT MOMENT</div>`;
+            }
+
+            const scheduleDiv = document.getElementById('schedule');
+            scheduleDiv.innerHTML = '';
+            
+            filteredSchedule.forEach(item => {
+                const start = timeToMinutes(item.start);
+                const end = timeToMinutes(item.end);
+                const isPast = currentMinutes >= end;
+                const isCurrent = currentMinutes >= start && currentMinutes < end;
+
+                const div = document.createElement('div');
+                div.className = 'task-item';
+                if (isPast) div.style.opacity = '0.35';
+                if (isCurrent) div.style.borderColor = 'var(--accent)';
+                
+                div.innerHTML = `
+                    <div style="flex: 1;">
+                        <div style="font-weight: 800; font-size: 15px; color: ${isCurrent ? 'var(--accent)' : 'inherit'}">${getDisplayName(item)}</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">${item.start} - ${item.end}</div>
+                    </div>
+                    ${isCurrent ? '<div style="color: var(--accent); font-weight: 900; font-size: 10px;">NU</div>' : ''}
+                `;
+                scheduleDiv.appendChild(div);
+            });
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            const cursor = document.getElementById('cursor');
+            const follower = document.getElementById('follower');
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+            follower.style.left = (e.clientX - 16) + 'px';
+            follower.style.top = (e.clientY - 16) + 'px';
+        });
+
+        document.querySelectorAll('a, button, select, input, textarea, .color-circle').forEach(el => {
+            el.addEventListener('mouseenter', () => document.getElementById('follower').classList.add('cursor-hover'));
+            el.addEventListener('mouseleave', () => document.getElementById('follower').classList.remove('cursor-hover'));
+        });
+
+        setAccent(currentAccent);
+        loadSettings();
+        updateSchedule();
+        updateGreeting();
+        renderTasks();
+        setInterval(() => { updateSchedule(); updateGreeting(); }, 1000);
+    </script>
+</body>
+</html>
