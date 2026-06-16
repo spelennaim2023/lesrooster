@@ -3,1219 +3,717 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BusApp Venlo - NCS</title>
-    <!-- Tailwind CSS voor een modern, strak design -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons voor professionele iconen -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <title>Lesrooster</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;850&family=JetBrains+Mono:wght@400;700&display=swap');
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            cursor: none !important;
+        }
+
+        :root {
+            --bg: #050505;
+            --sidebar-bg: rgba(10, 10, 15, 0.9);
+            --card-bg: rgba(20, 20, 25, 0.6);
+            --accent: #0ea5e9;
+            --accent-glow: rgba(14, 165, 233, 0.3);
+            --text-main: #f9fafb;
+            --text-muted: #6b7280;
+            --border: rgba(255, 255, 255, 0.1);
+            --border-light: rgba(255, 255, 255, 0.05);
+            --success: #10b981;
+            --danger: #ef4444;
+            --glass: rgba(255, 255, 255, 0.02);
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.15) 0px, transparent 40%),
+                radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 40%),
+                radial-gradient(at 50% 100%, rgba(236, 72, 153, 0.05) 0px, transparent 40%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
         }
-        .font-mono {
-            font-family: 'JetBrains Mono', monospace;
+
+        /* Speciale Muis Styles */
+        .custom-cursor {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 11000;
+            will-change: transform;
         }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+
+        .cursor-follower {
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--accent);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 10999;
+            transition: transform 0.15s ease-out, width 0.3s, height 0.3s, background 0.3s, border 0.3s;
+            will-change: transform;
         }
-        ::-webkit-scrollbar-track {
-            background: #0f172a;
+
+        .cursor-hover {
+            width: 60px;
+            height: 60px;
+            background: var(--accent-glow);
+            border: 1px solid var(--accent);
         }
-        ::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 4px;
+
+        /* --- Dashboard Layout --- */
+        .app-container {
+            display: flex;
+            width: 100%;
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #475569;
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
         }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #0a0a0f;
+            color: var(--text-main);
+            padding: 40px;
+            border-radius: 28px;
+            border: 1px solid var(--border);
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border-light);
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        /* Responsiviteit voor tablets en telefoons */
+        @media (max-width: 1024px) {
+            .dashboard-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .app-container { flex-direction: column; }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 20px;
+                border-right: none;
+                border-bottom: 1px solid var(--border-light);
+            }
+            .brand { margin-bottom: 20px; }
+            .main-content { padding: 30px 20px; }
+            .dashboard-grid { grid-template-columns: 1fr; gap: 15px; }
+            .card-4, .card-2, .card-3, .card-6 { grid-column: span 1; }
+            .welcome-title { font-size: 32px; }
+        }
+
+        /* Verberg custom cursor op touch-apparaten */
+        @media (pointer: coarse) {
+            .custom-cursor, .cursor-follower { display: none !important; }
+            * { cursor: auto !important; }
+        }
+
+        .brand {
+            font-size: 22px;
+            font-weight: 1000;
+            color: var(--accent);
+            letter-spacing: -1.5px;
+            margin-bottom: 60px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 14px 20px;
+            border-radius: 16px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--glass);
+            color: var(--accent);
+            transform: translateX(5px);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 60px;
+            max-width: 1400px;
+            overflow-y: auto;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-auto-rows: auto;
+            gap: 24px;
+            margin-top: 30px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(30px) saturate(200%);
+            border: 1px solid var(--border-light);
+            border-radius: 32px;
+            padding: 30px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.03);
+            box-shadow: 0 20px 40px -20px var(--accent-glow);
+        }
+
+        /* Bento Layout Sizing */
+        .card-4 { grid-column: span 4; }
+        .card-2 { grid-column: span 2; }
+        .card-3 { grid-column: span 3; }
+        .card-6 { grid-column: span 6; }
+
+        .welcome-title {
+            font-size: 42px;
+            font-weight: 900;
+            letter-spacing: -2px;
+            margin-bottom: 10px;
+        }
+
+        /* --- Live Status Widget --- */
+        .current-lesson {
+            background: linear-gradient(165deg, var(--accent) 0%, #6366f1 100%);
+            color: white;
+            border: none;
+        }
+
+        .current-lesson::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .current-lesson-name {
+            font-size: 32px;
+            font-weight: 1000;
+            letter-spacing: -1px;
+        }
+
+        /* --- Task Manager --- */
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            margin-bottom: 10px;
+            border: 1px solid transparent;
+            transition: 0.2s;
+        }
+
+        .task-item:hover {
+            border-color: var(--accent);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .task-check {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            border: 2px solid var(--accent);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .task-check.checked {
+            background: var(--accent);
+            position: relative;
+        }
+
+        .task-check.checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 12px;
+        }
+
+        /* --- Settings Inputs Pro --- */
+        .color-picker-grid {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .color-circle {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .color-circle.active { border-color: white; }
+
+        .modal-title {
+            font-size: 28px;
+            font-weight: 900;
+            margin-bottom: 30px;
+            color: var(--accent);
+        }
+
+        .setting-group { margin-bottom: 25px; }
+
+        .setting-label {
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            display: block;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+
+        .setting-input, .setting-select {
+            width: 100%;
+            padding: 14px 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            color: white;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        .setting-input:focus, .setting-select:focus { border-color: var(--accent); }
+
+        .modal-footer {
+            display: flex;
+            gap: 15px;
+            margin-top: 40px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border-radius: 14px;
+            border: none;
+            font-weight: 800;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-save { background: var(--accent); color: white; }
+        .btn-cancel { background: rgba(255,255,255,0.1); color: white; }
+        
+        /* --- Task Manager Improvements --- */
+        .task-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .task-input-group .setting-input {
+            flex: 1;
+            padding: 12px;
+        }
+        
+        .task-list-container {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .task-item span {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .task-item.completed span {
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+
+        .delete-task {
+            color: var(--danger);
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .btn:hover { transform: translateY(-2px); opacity: 0.9; }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col pb-16 md:pb-0">
+<body>
+    <div class="app-container">
+        <div class="custom-cursor" id="cursor"></div>
+        <div class="cursor-follower" id="follower"></div>
 
-    <header class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-45 shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="bg-amber-500 text-slate-950 p-2.5 rounded-xl font-black flex items-center justify-center shadow-lg shadow-amber-500/10">
-                    <i data-lucide="bus" class="w-6 h-6"></i>
-                </div>
-                <div>
-                    <h1 class="text-lg md:text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
-                        BusApp Venlo <span class="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Sem Edition</span>
-                    </h1>
-                    <p class="text-[10px] text-slate-400">Powered by <span class="text-amber-400 font-bold tracking-wide">Naim Cloud Software (NCS)</span></p>
-                </div>
+        <nav class="sidebar">
+            <div class="brand">⚡ NCS OEFENHUB</div>
+            <a href="#" class="nav-item active">🏠 Overzicht</a>
+            <a href="#" class="nav-item" onclick="openSettings()">⚙️ Systeem</a>
+            <div style="font-size: 10px; color: var(--text-muted); text-align: center; margin-top: 20px; font-weight: 800; letter-spacing: 1px;">
+                NAIM CLOUD SOFTWARE
             </div>
-            
-            <!-- Real-time Klok en Status -->
-            <div class="text-right hidden sm:block">
-                <div id="live-clock" class="text-lg font-mono font-bold text-amber-400 tracking-wider">12:00:00</div>
-                <div class="text-[10px] text-emerald-400 flex items-center justify-end gap-1 font-semibold">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Live NCS Verbinding
-                </div>
-            </div>
-        </div>
-    </header>
+        </nav>
 
-    <main class="max-w-7xl w-full mx-auto p-4 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        <!-- Linkerkolom: Haltes & Zoeken -->
-        <section class="lg:col-span-4 space-y-4">
-            
-            <!-- Zoeken & Lijst -->
-            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-xl space-y-4">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                        <i data-lucide="map-pin" class="text-amber-500 w-4 h-4"></i> Venlose Haltelijst
-                    </h2>
-                    <span id="halte-count" class="text-[10px] bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full font-bold">0 haltes</span>
-                </div>
-                
-                <div class="relative">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500">
-                        <i data-lucide="search" class="w-4 h-4"></i>
-                    </span>
-                    <input type="text" id="search-input" onkeyup="renderHaltes()" placeholder="Zoek een halte..." class="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 text-slate-200 placeholder-slate-500 text-xs transition-all">
+        <main class="main-content">
+            <header class="welcome-header">
+                <div class="welcome-title" id="greeting">Goedenavond, Student</div>
+                <div class="quote-box" id="quote">"De toekomst hangt af van wat je vandaag doet."</div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Live Progress (Focus) -->
+                <div class="card card-4" id="currentLessonDisplay">
+                    <!-- Dynamisch gevuld -->
                 </div>
 
-                <!-- Halte Lijst Container -->
-                <div class="space-y-2 max-h-[320px] overflow-y-auto pr-1" id="haltes-list">
-                    <!-- Dynamisch gegenereerd -->
+                <!-- System Clock -->
+                <div class="card card-2" style="text-align: center; display: flex; flex-direction: column; justify-content: center;">
+                    <div style="font-size: 12px; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Realtime</div>
+                    <div style="font-size: 38px; font-weight: 1000; color: var(--accent); margin: 5px 0;" id="currentTime">00:00:00</div>
+                    <div id="currentDate" style="font-size: 14px; font-weight: 600; color: var(--text-muted);">Laden...</div>
                 </div>
 
-                <!-- Open Studio Knop -->
-                <button onclick="openCreatorModal()" class="w-full bg-amber-500 hover:bg-amber-650 text-slate-950 font-black py-3 rounded-xl text-xs tracking-wider uppercase shadow-lg shadow-amber-500/5 transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="cpu" class="w-4 h-4"></i> NCS Studio & Creator Mode
-                </button>
-            </div>
+                <!-- Schedule -->
+                <div class="card card-4">
+                    <h3 style="margin-bottom: 25px; font-size: 18px; font-weight: 900;">📅 VOLGENDE LESSEN</h3>
+                    <div id="schedule"></div>
+                </div>
 
-            <!-- Reisplanner kaart -->
-            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-xl hidden md:block space-y-3">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                    <i data-lucide="route" class="text-amber-500 w-4 h-4"></i> Snelle Reisplanner
-                </h3>
-                <div class="space-y-3">
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Vertrek</label>
-                        <select id="plan-from" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 focus:ring-1 focus:ring-amber-500/50 focus:outline-none">
-                            <!-- Dynamisch -->
-                        </select>
+                <!-- Tasks -->
+                <div class="card card-2">
+                    <h3 style="margin-bottom: 20px; font-size: 18px; font-weight: 900;">📋 TAKEN</h3>
+                    <div class="task-input-group">
+                        <input type="text" id="newTask" class="setting-input" placeholder="Nieuwe taak..." style="padding: 10px;">
+                        <button class="btn btn-save" style="padding: 0 15px;" onclick="addTask()">+</button>
                     </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Aankomst</label>
-                        <select id="plan-to" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-200 focus:ring-1 focus:ring-amber-500/50 focus:outline-none">
-                            <!-- Dynamisch -->
-                        </select>
-                    </div>
-                    <button onclick="planReis()" class="w-full bg-slate-800 border border-slate-700 hover:bg-slate-750 text-slate-100 font-bold py-2 px-4 rounded-xl transition-all text-xs flex items-center justify-center gap-1.5">
-                        <i data-lucide="navigation" class="w-3.5 h-3.5 text-amber-400"></i> Route Berekenen
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <section class="lg:col-span-8 space-y-4">
-            
-            <!-- Actieve Halte Info -->
-            <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div class="space-y-1">
-                    <span class="text-[10px] font-black uppercase tracking-widest text-amber-500" id="current-halte-type">-</span>
-                    <h2 class="text-xl md:text-2xl font-black text-white" id="current-halte-name">Laden...</h2>
-                    <p class="text-[11px] text-slate-400 flex items-center gap-1.5" id="current-halte-desc">
-                        <!-- Beschrijving -->
-                    </p>
-                </div>
-
-                <!-- Bron Schakelaar (Live of Custom) -->
-                <div class="flex items-center gap-2 self-start md:self-center" id="source-toggle-container">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Bron:</span>
-                    <div class="inline-flex bg-slate-950 p-1 border border-slate-800 rounded-xl">
-                        <button onclick="setSourceMode('live')" id="source-btn-live" class="px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider uppercase transition-all">Live</button>
-                        <button onclick="setSourceMode('custom')" id="source-btn-custom" class="px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider uppercase transition-all">Custom</button>
+                    <div id="taskList" class="task-list-container">
+                        <!-- Dynamisch -->
                     </div>
                 </div>
             </div>
-
-            <!-- Filteropties & Verversen -->
-            <div class="flex items-center justify-between gap-2 overflow-x-auto pb-1">
-                <div class="flex gap-1.5 shrink-0">
-                    <button onclick="filterTijden('alle')" id="filter-btn-alle" class="px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all">Alle Bussen</button>
-                    <button onclick="filterTijden('streek')" id="filter-btn-streek" class="px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all">Streek</button>
-                    <button onclick="filterTijden('stads')" id="filter-btn-stads" class="px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all">Stadsdienst</button>
-                </div>
-                
-                <button onclick="fetchLiveTijden()" class="bg-slate-900 hover:bg-slate-800 text-slate-300 p-2 rounded-xl transition-all border border-slate-800 shrink-0 flex items-center justify-center gap-1.5 text-xs font-bold" title="Informatie nu bijwerken">
-                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5" id="refresh-icon"></i> <span class="hidden md:inline">Verversen</span>
-                </button>
-            </div>
-
-            <!-- Vertrektijden Bord -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-                <!-- Tabel Header -->
-                <div class="grid grid-cols-12 gap-2 bg-slate-950/80 px-4 py-3.5 text-[10px] font-bold text-slate-500 border-b border-slate-800 uppercase tracking-widest">
-                    <div class="col-span-2">Lijn</div>
-                    <div class="col-span-5 md:col-span-6">Eindbestemming</div>
-                    <div class="col-span-2">Vertrek</div>
-                    <div class="col-span-3 md:col-span-2 text-right">Spoor / Info</div>
-                </div>
-
-                <!-- Tabel Inhoud -->
-                <div id="vertrektijden-container" class="divide-y divide-slate-800/40 min-h-[220px]">
-                    <!-- Dynamisch -->
-                </div>
-            </div>
-        </section>
-
-    </main>
-
-    <div class="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 py-2 px-6 flex justify-around items-center md:hidden z-40 shadow-2xl">
-        <button onclick="switchMobileTab('bussen')" id="tab-bussen" class="flex flex-col items-center gap-1 text-amber-500 font-semibold text-[10px]">
-            <i data-lucide="bus" class="w-5 h-5"></i>
-            <span>Vertrektijden</span>
-        </button>
-        <button onclick="switchMobileTab('planner')" id="tab-planner" class="flex flex-col items-center gap-1 text-slate-500 text-[10px]">
-            <i data-lucide="navigation" class="w-5 h-5"></i>
-            <span>Reisplanner</span>
-        </button>
-        <button onclick="openCreatorModal()" class="flex flex-col items-center gap-1 text-slate-500 text-[10px]">
-            <i data-lucide="cpu" class="w-5 h-5"></i>
-            <span>Studio</span>
-        </button>
+        </main>
     </div>
 
-    <div id="creator-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto flex flex-col">
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-title">NCS SYSTEEM CONFIGURATIE</div>
             
-            <!-- Modal Header -->
-            <div class="p-5 border-b border-slate-800 flex items-center justify-between shrink-0">
-                <div class="flex items-center space-x-2">
-                    <div class="p-1.5 bg-amber-500/10 text-amber-400 rounded-lg">
-                        <i data-lucide="cpu" class="w-5 h-5"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-black text-white uppercase tracking-wider">NCS Creator Studio</h3>
-                        <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Naim Cloud Software Tools</p>
-                    </div>
-                </div>
-                <button onclick="closeCreatorModal()" class="p-1 text-slate-500 hover:text-white transition-all rounded-lg hover:bg-slate-800">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
+            <div class="setting-group">
+                <label class="setting-label">Naam Student</label>
+                <input type="text" id="studentNameInput" class="setting-input" placeholder="Je naam...">
             </div>
 
-            <!-- Modal Content Tabs -->
-            <div class="p-5 overflow-y-auto space-y-6 flex-grow">
-                
-                <!-- Tab Knoppen -->
-                <div class="grid grid-cols-2 bg-slate-950 p-1 border border-slate-800 rounded-xl shrink-0">
-                    <button onclick="switchStudioTab('add-bus')" id="studio-tab-bus-btn" class="py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all bg-amber-500 text-slate-950">
-                        Rit Toevoegen
-                    </button>
-                    <button onclick="switchStudioTab('add-halte')" id="studio-tab-halte-btn" class="py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white">
-                        Halte Bouwen
-                    </button>
+            <div class="setting-group">
+                <label class="setting-label">Thema Kleur</label>
+                <div class="color-picker-grid">
+                    <div class="color-circle" style="background: #0ea5e9;" onclick="setAccent('#0ea5e9')"></div>
+                    <div class="color-circle" style="background: #ec4899;" onclick="setAccent('#ec4899')"></div>
+                    <div class="color-circle" style="background: #f59e0b;" onclick="setAccent('#f59e0b')"></div>
+                    <div class="color-circle" style="background: #10b981;" onclick="setAccent('#10b981')"></div>
+                    <div class="color-circle" style="background: #a855f7;" onclick="setAccent('#a855f7')"></div>
+                    <div class="color-circle" style="background: #f97316;" onclick="setAccent('#f97316')"></div>
+                    <div class="color-circle" style="background: #84cc16;" onclick="setAccent('#84cc16')"></div>
+                    <div class="color-circle" style="background: #06b6d4;" onclick="setAccent('#06b6d4')"></div>
                 </div>
+            </div>
 
-                <!-- TAB 1: RIT TOEVOEGEN -->
-                <form id="form-add-bus" class="space-y-4" onsubmit="event.preventDefault(); saveCustomBus();">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Lijnnummer</label>
-                            <input type="text" id="bus-line" required placeholder="Bijv. 83 of Sem Express" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-500">
-                        </div>
-                        <div>
-                            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Lijn Type</label>
-                            <select id="bus-type" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none">
-                                <option value="stads">Stadsbus (Blauw)</option>
-                                <option value="streek">Streekbus (Groen)</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Bestemming / Eindhalte</label>
-                        <input type="text" id="bus-destination" required placeholder="Bijv. Sems Thuis" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-500">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Vertrektijd</label>
-                            <input type="time" id="bus-time" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-500">
-                        </div>
-                        <div>
-                            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Spoor / Platform</label>
-                            <input type="text" id="bus-platform" placeholder="Bijv. Perron A" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-500">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Status Melding</label>
-                        <select id="bus-status" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none">
-                            <option value="Op tijd|text-emerald-400">Op tijd</option>
-                            <option value="+3 min|text-rose-400 font-bold">+3 min vertraging</option>
-                            <option value="+10 min|text-rose-400 font-bold">+10 min vertraging</option>
-                            <option value="Vervallen|text-slate-500 line-through font-semibold">Vervallen</option>
-                            <option value="Geannuleerd|text-rose-500 font-bold">Geannuleerd</option>
-                            <option value="Sem Express 🚀|text-amber-400 font-extrabold animate-pulse">Sem Express Special</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Koppel aan Halte</label>
-                        <select id="bus-halte-link" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none">
-                            <!-- Dynamische haltes -->
-                        </select>
-                    </div>
-
-                    <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold py-3 rounded-xl text-xs tracking-wider uppercase shadow-lg shadow-amber-500/10 transition-all flex items-center justify-center gap-1.5">
-                        <i data-lucide="plus" class="w-4 h-4"></i> Rit Inplannen
-                    </button>
-                </form>
-
-                <!-- TAB 2: HALTE TOEVOEGEN -->
-                <form id="form-add-halte" class="space-y-4 hidden" onsubmit="event.preventDefault(); saveCustomHalte();">
-                    <div>
-                        <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Halte Naam</label>
-                        <input type="text" id="halte-name" required placeholder="Bijv. Venlo, Sems Kantoor" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-500">
-                    </div>
-
-                    <div>
-                        <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Locatietype</label>
-                        <input type="text" id="halte-type" required placeholder="Bijv. Studio, Straat of Kantoor" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-500">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Icoon type</label>
-                            <select id="halte-icon" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white focus:outline-none">
-                                <option value="map-pin">Locatie pin</option>
-                                <option value="home">Huis</option>
-                                <option value="briefcase">Kantoor</option>
-                                <option value="school">School / Fontys</option>
-                                <option value="terminal">Developer terminal</option>
-                                <option value="star">Ster</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Unieke Code (Optioneel)</label>
-                            <input type="text" id="halte-code" placeholder="CUSTOM" value="CUSTOM" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-400 focus:outline-none">
-                        </div>
-                    </div>
-
-                    <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold py-3 rounded-xl text-xs tracking-wider uppercase shadow-lg shadow-amber-500/10 transition-all flex items-center justify-center gap-1.5">
-                        <i data-lucide="plus" class="w-4 h-4"></i> Halte Toevoegen aan Venlo
-                    </button>
-                </form>
-
-                <!-- Beheer overzicht -->
-                <div class="pt-4 border-t border-slate-800 space-y-2">
-                    <h4 class="text-xs font-bold text-white flex items-center gap-2">
-                        <i data-lucide="folder" class="text-slate-400 w-4 h-4"></i> Databeheer & Herstel
-                    </h4>
-                    <p class="text-[10px] text-slate-400">Wil je de fabrieksinstellingen herstellen of de hele database leegvegen om helemaal zelf een nieuw netwerk op te zetten?</p>
-                    <div class="flex flex-wrap gap-2 pt-1">
-                        <button onclick="resetCreatorData('default')" class="bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500 hover:text-slate-950 px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider uppercase transition-all flex items-center gap-1">
-                            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Herstel Fabrieksinstellingen
-                        </button>
-                        <button onclick="resetCreatorData('clear')" class="bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-550 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider uppercase transition-all flex items-center gap-1">
-                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Wis Absoluut Alles
-                        </button>
-                    </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="setting-group">
+                    <label class="setting-label">Start Schooltijd</label>
+                    <select class="setting-select" id="startLesson">
+                        <option value="1">1e uur (08:30)</option>
+                        <option value="2">2e uur (09:20)</option>
+                        <option value="3">3e uur (10:35)</option>
+                    </select>
                 </div>
+                <div class="setting-group">
+                    <label class="setting-label">Eind Schooltijd</label>
+                    <select class="setting-select" id="endLesson">
+                        <option value="6">6e uur (14:25)</option>
+                        <option value="7">7e uur (15:15)</option>
+                        <option value="8">8e uur (16:05)</option>
+                    </select>
+                </div>
+            </div>
 
+            <label class="setting-label">Vakken Beheer</label>
+            <div class="subject-input-grid" id="subjectInputs" style="margin-bottom: 20px;"></div>
+
+            <div class="modal-footer">
+                <button class="btn btn-save" onclick="saveSettings()">OPSLAAN</button>
+                <button class="btn btn-cancel" onclick="closeSettings()">ANNULEREN</button>
             </div>
         </div>
     </div>
-
-    <div id="planner-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
-            <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-500 hover:text-white transition-all p-1 hover:bg-slate-800 rounded-lg">
-                <i data-lucide="x" class="w-5 h-5"></i>
-            </button>
-            <h3 class="text-md font-bold text-white mb-1 flex items-center gap-2">
-                <i data-lucide="route" class="text-amber-500"></i> Reisadvies (NCS Engine)
-            </h3>
-            <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-4 font-mono" id="travel-route-title">-</div>
-            
-            <div class="space-y-4" id="planner-results">
-                <!-- Wordt dynamisch berekend -->
-            </div>
-
-            <button onclick="closeModal()" class="mt-6 w-full bg-slate-800 hover:bg-slate-750 text-white font-bold py-2.5 rounded-xl transition-all text-xs">
-                Sluiten
-            </button>
-        </div>
-    </div>
-
-    <div id="custom-alert" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-sm w-full shadow-2xl text-center">
-            <i data-lucide="alert-circle" class="w-10 h-10 text-amber-500 mx-auto mb-3"></i>
-            <h4 class="text-md font-bold text-white mb-1">Bericht van NCS</h4>
-            <p id="alert-text" class="text-xs text-slate-300 mb-4"></p>
-            <button onclick="closeAlert()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2 px-6 rounded-xl text-xs transition-all">Begrepen</button>
-        </div>
-    </div>
-
-    <div id="custom-confirm" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl max-w-sm w-full shadow-2xl text-center">
-            <i data-lucide="help-circle" class="w-10 h-10 text-amber-500 mx-auto mb-3"></i>
-            <h4 class="text-md font-bold text-white mb-1" id="confirm-title">Weet je het zeker?</h4>
-            <p id="confirm-text" class="text-xs text-slate-300 mb-4"></p>
-            <div class="flex justify-center gap-3">
-                <button id="confirm-cancel-btn" class="bg-slate-800 border border-slate-700 hover:bg-slate-750 text-slate-300 font-bold py-2 px-5 rounded-xl text-xs transition-all">Annuleren</button>
-                <button id="confirm-ok-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-5 rounded-xl text-xs transition-all">Verwijderen</button>
-            </div>
-        </div>
-    </div>
-
-    <footer class="bg-slate-950 border-t border-slate-900/60 text-slate-500 py-6 text-center text-[10px] shrink-0">
-        <div class="max-w-7xl mx-auto px-4 space-y-1.5 font-sans">
-            <p>&copy; 2026 BusApp Venlo. Speciaal ontworpen en gebouwd voor <strong class="text-slate-300">Sem</strong>.</p>
-            <p>Uitgegeven en ontwikkeld door <span class="text-amber-500 font-bold">Naim Cloud Software (NCS)</span></p>
-        </div>
-    </footer>
 
     <script>
-        // ... GLOBALE STATE EN CONSTANTEN ...
-        const defaultHaltes = [
-            { id: "venlo_station", code: "NL:S:61410100", name: "Venlo, Busstation (Station)", type: "Hoofdstation", icon: "train" },
-            { id: "hospital_viecuri", code: "NL:S:61410420", name: "Venlo, VieCuri Medisch Centrum", type: "Ziekenhuis", icon: "activity" },
-            { id: "blerick_station", code: "NL:S:61410290", name: "Blerick, Station", type: "Substation", icon: "train" },
-            { id: "tegelen_wilhelmina", code: "NL:S:61450200", name: "Tegelen, Wilhelminaplein", type: "Regio Halte", icon: "map-pin" },
-            { id: "fontys_venlo", code: "NL:S:61410650", name: "Venlo, Fontys Hogeschool", type: "Onderwijsinstelling", icon: "graduation-cap" },
-            { id: "centrum_nolens", code: "NL:S:61410310", name: "Venlo, Nolensplein", type: "Stads Halte", icon: "shopping-bag" }
+        let currentAccent = localStorage.getItem('accentColor') || '#0ea5e9';
+        let studentName = localStorage.getItem('studentName') || 'Student';
+        let startLesson = 1;
+        let endLesson = 8;
+        let subjectNames = {};
+
+        const schedule = [
+            { name: '1e lesuur', start: '08:30', end: '09:20', type: 'lesson', lessonNum: 1 },
+            { name: '2e lesuur', start: '09:20', end: '10:10', type: 'lesson', lessonNum: 2 },
+            { name: 'Pauze', start: '10:10', end: '10:35', type: 'break' },
+            { name: '3e lesuur', start: '10:35', end: '11:25', type: 'lesson', lessonNum: 3 },
+            { name: '4e lesuur', start: '11:25', end: '12:15', type: 'lesson', lessonNum: 4 },
+            { name: 'Pauze', start: '12:15', end: '12:45', type: 'break' },
+            { name: '5e lesuur', start: '12:45', end: '13:35', type: 'lesson', lessonNum: 5 },
+            { name: '6e lesuur', start: '13:35', end: '14:25', type: 'lesson', lessonNum: 6 },
+            { name: '7e lesuur', start: '14:25', end: '15:15', type: 'lesson', lessonNum: 7 },
+            { name: '8e lesuur', start: '15:15', end: '16:05', type: 'lesson', lessonNum: 8 }
         ];
 
-        let haltes = [];
-        let customBussen = [];
-        let activeSourceMode = {};
-        let selectedHalte = "";
-        let currentFilter = "alle";
-
-        // ... SCRIPT INITIALISATIE ...
-        window.onload = function() {
-            lucide.createIcons();
-            initClock();
-            loadAllData();
-            renderHaltes();
-            populatePlannerDropdowns();
-
-            // Automatische ververs-timer (elke minuut)
-            setInterval(() => {
-                verversTijden();
-            }, 60000);
-
-            // Klok verversing (elke seconde)
-            setInterval(updateClock, 1000);
-        };
-
-        // ... KLOK FUNCTIES ...
-        function initClock() {
-            updateClock();
+        function setAccent(color) {
+            document.documentElement.style.setProperty('--accent', color);
+            document.documentElement.style.setProperty('--accent-glow', color + '4D');
+            localStorage.setItem('accentColor', color);
         }
 
-        function updateClock() {
-            const now = new Date();
-            const clockEl = document.getElementById('live-clock');
-            if (clockEl) {
-                clockEl.innerText = now.toTimeString().split(' ')[0];
-            }
+        function updateGreeting() {
+            const hour = new Date().getHours();
+            let greetingPrefix = "Goedenacht";
+            if (hour >= 5 && hour < 12) greetingPrefix = "Goedemorgen";
+            else if (hour >= 12 && hour < 18) greetingPrefix = "Goedemiddag";
+            else if (hour >= 18) greetingPrefix = "Goedenavond";
+            document.getElementById('greeting').textContent = `${greetingPrefix}, ${studentName}`;
         }
 
-        // ... POP-UPS EN ALERTS ...
-        function showAlert(msg) {
-            document.getElementById('alert-text').innerText = msg;
-            document.getElementById('custom-alert').classList.remove('hidden');
+        // Task Manager Logic
+        let tasks = JSON.parse(localStorage.getItem('ncsTasks')) || [];
+        
+        function addTask() {
+            const input = document.getElementById('newTask');
+            if (!input.value.trim()) return;
+            tasks.push({ text: input.value, completed: false });
+            input.value = '';
+            renderTasks();
         }
 
-        function closeAlert() {
-            document.getElementById('custom-alert').classList.add('hidden');
+        function toggleTask(index) {
+            tasks[index].completed = !tasks[index].completed;
+            renderTasks();
         }
 
-        let confirmCallback = null;
-
-        function showConfirm(title, text, callback) {
-            document.getElementById('confirm-title').innerText = title;
-            document.getElementById('confirm-text').innerText = text;
-            confirmCallback = callback;
-            
-            document.getElementById('custom-confirm').classList.remove('hidden');
-            
-            document.getElementById('confirm-ok-btn').onclick = function() {
-                if (confirmCallback) confirmCallback();
-                closeConfirm();
-            };
-            document.getElementById('confirm-cancel-btn').onclick = closeConfirm;
+        function deleteTask(index) {
+            tasks.splice(index, 1);
+            renderTasks();
         }
 
-        function closeConfirm() {
-            document.getElementById('custom-confirm').classList.add('hidden');
-            confirmCallback = null;
+        function renderTasks() {
+            localStorage.setItem('ncsTasks', JSON.stringify(tasks));
+            const list = document.getElementById('taskList');
+            list.innerHTML = tasks.map((task, i) => `
+                <div class="task-item ${task.completed ? 'completed' : ''}">
+                    <div class="task-check ${task.completed ? 'checked' : ''}" onclick="toggleTask(${i})"></div>
+                    <span>${task.text}</span>
+                    <div class="delete-task" onclick="deleteTask(${i})">×</div>
+                </div>
+            `).join('');
         }
 
-        // ... DATA OPSLAG & BEHEER ...
-        function loadAllData() {
-            const storedHaltes = localStorage.getItem('NCS_Haltes');
-            const storedBussen = localStorage.getItem('NCS_Bussen');
-            const storedSourceModes = localStorage.getItem('NCS_SourceModes');
-
-            if (storedHaltes) {
-                try {
-                    haltes = JSON.parse(storedHaltes);
-                } catch(e) {
-                    haltes = [...defaultHaltes];
-                }
-            } else {
-                haltes = [...defaultHaltes];
-            }
-
-            if (storedBussen) {
-                try {
-                    customBussen = JSON.parse(storedBussen);
-                } catch(e) {
-                    customBussen = [];
-                }
-            } else {
-                customBussen = [];
-            }
-
-            if (storedSourceModes) {
-                try {
-                    activeSourceMode = JSON.parse(storedSourceModes);
-                } catch(e) {
-                    activeSourceMode = {};
-                }
-            } else {
-                activeSourceMode = {};
-            }
-
-            // Fallback om te zorgen dat alle actieve haltes een bronmodus hebben
-            haltes.forEach(h => {
-                if (!activeSourceMode[h.id]) {
-                    activeSourceMode[h.id] = h.custom ? 'custom' : 'live';
-                }
-            });
-
-            // Selecteer standaard de eerste halte uit de lijst
-            if (haltes.length > 0) {
-                selectHalte(haltes[0].id);
-            } else {
-                selectedHalte = "";
-                document.getElementById('current-halte-name').innerText = "Geen haltes beschikbaar";
-                document.getElementById('current-halte-type').innerText = "-";
-                document.getElementById('current-halte-desc').innerHTML = "Voeg een halte toe via NCS Studio om te beginnen.";
-                renderVertrektijdenUI([]);
-            }
-
-            updateHalteCount();
-        }
-
-        function saveAllData() {
-            localStorage.setItem('NCS_Haltes', JSON.stringify(haltes));
-            localStorage.setItem('NCS_Bussen', JSON.stringify(customBussen));
-            localStorage.setItem('NCS_SourceModes', JSON.stringify(activeSourceMode));
-            updateHalteCount();
-        }
-
-        function updateHalteCount() {
-            document.getElementById('halte-count').innerText = `${haltes.length} haltes`;
-        }
-
-        function resetCreatorData(mode = 'default') {
-            if (mode === 'clear') {
-                showConfirm(
-                    "Alles Wissen",
-                    "Weet je zeker dat je alle haltes en bussen wilt wissen? Je begint dan met een lege app om je eigen stad te bouwen.",
-                    () => {
-                        haltes = [];
-                        customBussen = [];
-                        activeSourceMode = {};
-                        saveAllData();
-                        renderHaltes();
-                        populatePlannerDropdowns();
-                        selectedHalte = "";
-                        
-                        document.getElementById('current-halte-name').innerText = "Geen haltes beschikbaar";
-                        document.getElementById('current-halte-type').innerText = "-";
-                        document.getElementById('current-halte-desc').innerHTML = "Voeg een halte toe via NCS Studio om te beginnen.";
-                        renderVertrektijdenUI([]);
-                        
-                        closeCreatorModal();
-                        showAlert("Alle data is succesvol gewist.");
-                    }
-                );
-            } else {
-                showConfirm(
-                    "Standaard Herstellen",
-                    "Weet je zeker dat je de fabrieksinstellingen wilt herstellen? Hiermee worden alle originele Venlose stations teruggezet.",
-                    () => {
-                        localStorage.removeItem('NCS_Haltes');
-                        localStorage.removeItem('NCS_Bussen');
-                        localStorage.removeItem('NCS_SourceModes');
-                        loadAllData();
-                        renderHaltes();
-                        populatePlannerDropdowns();
-                        closeCreatorModal();
-                        showAlert("De standaard Venlose dienstregeling is hersteld.");
-                    }
-                );
-            }
-        }
-
-        // ... CRUD BEWERKINGEN HALTES ...
-        function saveCustomHalte() {
-            const name = document.getElementById('halte-name').value.trim();
-            const type = document.getElementById('halte-type').value.trim();
-            const icon = document.getElementById('halte-icon').value;
-            const code = document.getElementById('halte-code').value.trim() || "CUSTOM";
-
-            if (!name || !type) {
-                showAlert("Naam en Locatietype zijn verplichte velden.");
-                return;
-            }
-
-            const newId = "halte_" + Date.now();
-            const newHalte = {
-                id: newId,
-                code: code,
-                name: name,
-                type: type,
-                icon: icon,
-                custom: true
-            };
-
-            haltes.push(newHalte);
-            activeSourceMode[newId] = 'custom';
-
-            saveAllData();
-            renderHaltes();
-            populatePlannerDropdowns();
-            selectHalte(newId);
-            
-            // Formulier leegmaken
-            document.getElementById('form-add-halte').reset();
-            closeCreatorModal();
-            showAlert(`Nieuwe halte "${name}" succesvol gebouwd!`);
-        }
-
-        function verwijderHalte(halteId, event) {
-            if (event) event.stopPropagation(); // Voorkom dat de halte direct geselecteerd wordt
-            
-            const halte = haltes.find(h => h.id === halteId);
-            if (!halte) return;
-
-            showConfirm(
-                "Halte Verwijderen",
-                `Weet je zeker dat je "${halte.name}" wilt verwijderen? Alle bijbehorende ritten worden ook gewist.`,
-                () => {
-                    haltes = haltes.filter(h => h.id !== halteId);
-                    customBussen = customBussen.filter(b => b.halteId !== halteId);
-                    
-                    saveAllData();
-                    renderHaltes();
-                    populatePlannerDropdowns();
-
-                    if (selectedHalte === halteId) {
-                        if (haltes.length > 0) {
-                            selectHalte(haltes[0].id);
-                        } else {
-                            selectedHalte = "";
-                            document.getElementById('current-halte-name').innerText = "Geen haltes beschikbaar";
-                            document.getElementById('current-halte-type').innerText = "-";
-                            document.getElementById('current-halte-desc').innerHTML = "Voeg een halte toe via NCS Studio om te beginnen.";
-                            renderVertrektijdenUI([]);
-                        }
-                    }
-                    showAlert(`Halte "${halte.name}" is verwijderd.`);
-                }
-            );
-        }
-
-        // ... CRUD BEWERKINGEN BUSRITTEN ...
-        function saveCustomBus() {
-            const line = document.getElementById('bus-line').value.trim();
-            const destination = document.getElementById('bus-destination').value.trim();
-            const time = document.getElementById('bus-time').value;
-            const platform = document.getElementById('bus-platform').value.trim() || "Spoor -";
-            const statusSelection = document.getElementById('bus-status').value.split('|');
-            const status = statusSelection[0];
-            const statusColor = statusSelection[1];
-            const halteId = document.getElementById('bus-halte-link').value;
-            const type = document.getElementById('bus-type').value;
-
-            if (!line || !destination || !time || !halteId) {
-                showAlert("Zorg ervoor dat alle verplichte velden voor de busrit zijn ingevuld.");
-                return;
-            }
-
-            const newBus = {
-                id: "bus_" + Date.now(),
-                halteId: halteId,
-                line: line,
-                destination: destination,
-                time: time,
-                platform: platform,
-                status: status,
-                statusColor: statusColor,
-                type: type
-            };
-
-            customBussen.push(newBus);
-            saveAllData();
-
-            // Als we momenteel op deze halte staan, direct de tijden bijwerken
-            if (selectedHalte === halteId) {
-                verversTijden();
-            }
-
-            document.getElementById('form-add-bus').reset();
-            closeCreatorModal();
-            showAlert(`Busrit lijn ${line} naar ${destination} is succesvol ingepland!`);
-        }
-
-        function verwijderBus(busId) {
-            const bus = customBussen.find(b => b.id === busId);
-            if (!bus) return;
-
-            showConfirm(
-                "Busrit Verwijderen",
-                `Weet je zeker dat je buslijn ${bus.line} richting ${bus.destination} wilt annuleren/verwijderen?`,
-                () => {
-                    customBussen = customBussen.filter(b => b.id !== busId);
-                    saveAllData();
-                    verversTijden();
-                    showAlert(`Buslijn ${bus.line} is succesvol verwijderd.`);
-                }
-            );
-        }
-
-        // ... SIDEBAR & SELECTIE UI ...
-        function renderHaltes() {
-            const haltesList = document.getElementById('haltes-list');
-            if (!haltesList) return;
-            
-            haltesList.innerHTML = '';
-
-            const query = document.getElementById('search-input').value.toLowerCase();
-            const gefilterdeHaltes = haltes.filter(h => h.name.toLowerCase().includes(query) || h.type.toLowerCase().includes(query));
-
-            if (gefilterdeHaltes.length === 0) {
-                haltesList.innerHTML = `
-                    <div class="p-6 text-center text-slate-500 text-xs">
-                        Geen haltes gevonden die voldoen aan je zoekopdracht.
-                    </div>
-                `;
-                return;
-            }
-
-            gefilterdeHaltes.forEach(halte => {
-                const isActive = halte.id === selectedHalte;
-                const activeClass = isActive 
-                    ? 'bg-amber-500/10 border-amber-500 text-white' 
-                    : 'bg-slate-950 border-slate-900 text-slate-400 hover:bg-slate-900/40 hover:text-slate-200';
-
-                const creatorBadge = halte.custom 
-                    ? `<span class="text-[8px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.2 rounded font-black uppercase tracking-wider shrink-0">Sem</span>`
-                    : '';
-
-                const iconColorClass = isActive ? 'bg-amber-500 text-slate-950 shadow-md' : 'bg-slate-900 text-slate-500';
-
-                const halteHTML = `
-                    <div onclick="selectHalte('${halte.id}')" class="p-3 rounded-xl border ${activeClass} cursor-pointer transition-all flex items-center justify-between group">
-                        <div class="flex items-center space-x-3 overflow-hidden">
-                            <div class="p-2 rounded-lg ${iconColorClass} transition-colors shrink-0">
-                                <i data-lucide="${halte.icon || 'map-pin'}" class="w-4 h-4"></i>
-                            </div>
-                            <div class="truncate">
-                                <h4 class="text-xs font-bold text-slate-200 group-hover:text-white transition-colors truncate">${halte.name}</h4>
-                                <span class="text-[10px] text-slate-500 block truncate">${halte.type}</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-1.5 shrink-0">
-                            ${creatorBadge}
-                            <button onclick="verwijderHalte('${halte.id}', event)" class="p-1 hover:bg-red-500/20 text-slate-600 hover:text-red-400 rounded-lg transition-all" title="Verwijder deze halte">
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                            </button>
-                            <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity"></i>
-                        </div>
-                    </div>
-                `;
-                haltesList.innerHTML += halteHTML;
-            });
-            lucide.createIcons();
-        }
-
-        function selectHalte(halteId) {
-            selectedHalte = halteId;
-            const halte = haltes.find(h => h.id === halteId);
-            
-            if (!halte) return;
-
-            document.getElementById('current-halte-name').innerText = halte.name;
-            document.getElementById('current-halte-type').innerText = halte.type;
-
-            // Update details en bronbeschrijving
-            if (halte.custom) {
-                document.getElementById('current-halte-desc').innerHTML = `<i data-lucide="info" class="w-3.5 h-3.5 text-amber-500"></i> Beheerd via Sem's Creator Mode. Handmatige invoer actief.`;
-                activeSourceMode[halteId] = 'custom'; // Custom haltes kunnen alleen custom ritten hebben
-            } else {
-                document.getElementById('current-halte-desc').innerHTML = `<i data-lucide="info" class="w-3.5 h-3.5 text-slate-400"></i> Live verbinding met openbaar OV netwerk of handmatig beheer.`;
-            }
-
-            renderHaltes();
-            updateSourceToggleUI();
-            verversTijden();
-        }
-
-        // ... SWITCH BRON (LIVE / CUSTOM) ...
-        function updateSourceToggleUI() {
-            const currentHalteObj = haltes.find(h => h.id === selectedHalte);
-            const container = document.getElementById('source-toggle-container');
-            
-            if (!currentHalteObj) return;
-
-            if (currentHalteObj.custom) {
-                // Verberg de bronschakelaar voor custom haltes, die zijn altijd 'custom'
-                container.classList.add('invisible');
-                return;
-            } else {
-                container.classList.remove('invisible');
-            }
-
-            const activeMode = activeSourceMode[selectedHalte] || 'live';
-            const liveBtn = document.getElementById('source-btn-live');
-            const customBtn = document.getElementById('source-btn-custom');
-
-            if (activeMode === 'live') {
-                liveBtn.className = "px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase bg-amber-500 text-slate-950 shadow-md";
-                customBtn.className = "px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider uppercase text-slate-500 hover:text-slate-300";
-            } else {
-                customBtn.className = "px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wider uppercase bg-amber-500 text-slate-950 shadow-md";
-                liveBtn.className = "px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider uppercase text-slate-500 hover:text-slate-300";
-            }
-        }
-
-        function setSourceMode(mode) {
-            const currentHalteObj = haltes.find(h => h.id === selectedHalte);
-            if (!currentHalteObj || currentHalteObj.custom) return;
-
-            activeSourceMode[selectedHalte] = mode;
-            saveAllData();
-            updateSourceToggleUI();
-            verversTijden();
-        }
-
-        // ... OPHALEN & VERWERKEN VERTREKTIJDEN ...
-        function verversTijden() {
-            fetchLiveTijden();
-        }
-
-        async function fetchLiveTijden() {
-            const icon = document.getElementById('refresh-icon');
-            if (icon) icon.classList.add('animate-spin');
-
-            const currentHalteObj = haltes.find(h => h.id === selectedHalte);
-            if (!currentHalteObj) {
-                renderVertrektijdenUI([]);
-                if (icon) icon.classList.remove('animate-spin');
-                return;
+        function loadSettings() {
+            const saved = localStorage.getItem('scheduleSettings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                startLesson = settings.startLesson || 1;
+                endLesson = settings.endLesson || 8;
+                subjectNames = settings.subjectNames || {};
+                studentName = settings.studentName || 'Student';
             }
             
-            const mode = activeSourceMode[selectedHalte] || 'live';
-
-            if (mode === 'custom' || currentHalteObj.code === "CUSTOM") {
-                loadCustomDienstregeling();
-                if (icon) {
-                    setTimeout(() => icon.classList.remove('animate-spin'), 300);
-                }
-                return;
-            }
-
-            // Live openbaar vervoer API aanroep (v0.ovapi.nl)
-            try {
-                const response = await fetch(`https://v0.ovapi.nl/tpc/${currentHalteObj.code}`);
-                if (!response.ok) throw new Error("API Offline");
-                const data = await response.json();
-                
-                const parseResults = parseOVapiPayload(data, currentHalteObj.code);
-                renderVertrektijdenUI(parseResults);
-            } catch (error) {
-                console.warn("Kon live data niet ophalen. Er wordt teruggevallen op de standaardsimulatie:", error);
-                const fallbackResults = generateFallbackData(selectedHalte);
-                renderVertrektijdenUI(fallbackResults);
-            } finally {
-                if (icon) {
-                    setTimeout(() => icon.classList.remove('animate-spin'), 300);
-                }
-            }
-        }
-
-        function loadCustomDienstregeling() {
-            // Filter uitsluitend de door de gebruiker ingevoerde ritten voor de geselecteerde halte
-            const gefilterdeBussen = customBussen.filter(b => b.halteId === selectedHalte);
-            
-            // Sorteer bussen op vertrektijd (HH:MM)
-            gefilterdeBussen.sort((a, b) => a.time.localeCompare(b.time));
-            renderVertrektijdenUI(gefilterdeBussen);
-        }
-
-        function parseOVapiPayload(data, code) {
-            let parsed = [];
-            const passes = data[code]?.passes;
-            if (!passes) return parsed;
-
-            const now = new Date();
-
-            Object.keys(passes).forEach(key => {
-                const pass = passes[key];
-                const targetTime = new Date(pass.TargetDepartureTime);
-                const expectedTime = pass.ExpectedDepartureTime ? new Date(pass.ExpectedDepartureTime) : targetTime;
-
-                // Toon ritten die nog niet vertrokken zijn (of minder dan 3 minuten geleden)
-                if (expectedTime >= new Date(now.getTime() - 180000)) {
-                    const diff = expectedTime - targetTime;
-                    const delayMin = Math.round(diff / 60000);
-
-                    const hr = String(targetTime.getHours()).padStart(2, '0');
-                    const mn = String(targetTime.getMinutes()).padStart(2, '0');
-                    const timeStr = `${hr}:${mn}`;
-
-                    let status = "Op tijd";
-                    let statusColor = "text-emerald-400";
-
-                    if (delayMin > 0) {
-                        status = `+${delayMin} min`;
-                        statusColor = "text-rose-400 font-bold";
-                    }
-                    if (pass.TripStatus === "CANCELLED") {
-                        status = "Vervallen";
-                        statusColor = "text-slate-500 line-through font-semibold";
-                    }
-
-                    const lineNum = parseInt(pass.LinePlanningNumber);
-                    const type = (lineNum < 10) ? "stads" : "streek";
-
-                    parsed.push({
-                        id: pass.JourneyNumber || Math.random().toString(),
-                        line: pass.LinePlanningNumber,
-                        type: type,
-                        destination: pass.DestinationName50,
-                        time: timeStr,
-                        status: status,
-                        statusColor: statusColor,
-                        platform: pass.UserStopAreaCode ? `Perron ${pass.UserStopAreaCode.slice(-1)}` : "Halte"
-                    });
-                }
-            });
-
-            parsed.sort((a, b) => a.time.localeCompare(b.time));
-            return parsed;
-        }
-
-        function generateFallbackData(halteId) {
-            const now = new Date();
-            const startMinutes = now.getHours() * 60 + now.getMinutes();
-            let result = [];
-
-            const dummyLijnen = [
-                { line: "1", type: "stads", dest: "Blerick Vosakker", interval: 15 },
-                { line: "2", type: "stads", dest: "Blerick Klingerberg", interval: 20 },
-                { line: "3", type: "stads", dest: "Venlo-Zuid via VieCuri", interval: 30 },
-                { line: "66", type: "streek", dest: "Roermond via Tegelen", interval: 30 },
-                { line: "83", type: "streek", dest: "Nijmegen CS via Gennep", interval: 30 },
-                { line: "372", type: "streek", dest: "Panningen (Sneldienst)", interval: 45 }
-            ];
-
-            let actieveLijnen = [...dummyLijnen];
-            if (halteId === 'hospital_viecuri') {
-                actieveLijnen = dummyLijnen.filter(l => ["3", "66"].includes(l.line));
-            } else if (halteId === 'tegelen_wilhelmina') {
-                actieveLijnen = dummyLijnen.filter(l => ["66"].includes(l.line));
-            } else if (halteId === 'blerick_station') {
-                actieveLijnen = dummyLijnen.filter(l => ["1", "2"].includes(l.line));
-            }
-
-            actieveLijnen.forEach(bus => {
-                for (let m = startMinutes + 1; m < startMinutes + 180; m++) {
-                    if (m % bus.interval === 0) {
-                        const hr = Math.floor(m / 60) % 24;
-                        const mn = m % 60;
-                        const timeStr = `${String(hr).padStart(2, '0')}:${String(mn).padStart(2, '0')}`;
-
-                        let status = "Op tijd";
-                        let statusColor = "text-emerald-400";
-                        if (Math.random() > 0.88) {
-                            status = `+${Math.floor(Math.random() * 5) + 1} min`;
-                            statusColor = "text-rose-400 font-bold";
-                        }
-
-                        result.push({
-                            id: "gen_" + Math.random(),
-                            line: bus.line,
-                            type: bus.type,
-                            destination: bus.dest,
-                            time: timeStr,
-                            status: status,
-                            statusColor: statusColor,
-                            platform: `Perron ${String.fromCharCode(65 + (bus.line.charCodeAt(0) % 4))}`
-                        });
-                    }
-                }
-            });
-
-            return result.sort((a, b) => a.time.localeCompare(b.time));
-        }
-
-        // ... INKLEUREN EN RENDEREN VERTREKTIJDEN TABEL ...
-        function renderVertrektijdenUI(bussen) {
-            const container = document.getElementById('vertrektijden-container');
-            if (!container) return;
-            
+            const container = document.getElementById('subjectInputs');
             container.innerHTML = '';
-
-            const gefilterdeBussen = bussen.filter(b => {
-                if (currentFilter === 'alle') return true;
-                return b.type === currentFilter;
-            });
-
-            if (gefilterdeBussen.length === 0) {
-                container.innerHTML = `
-                    <div class="p-12 text-center text-slate-500 flex flex-col items-center justify-center">
-                        <i data-lucide="bus-front" class="w-10 h-10 mb-3 opacity-30 text-slate-400"></i>
-                        <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Geen bussen gevonden</p>
-                        <p class="text-[10px] text-slate-600 mt-1">Zit je in 'Custom' modus? Gebruik NCS Studio om ritten toe te voegen.</p>
-                    </div>
-                `;
-                lucide.createIcons();
-                return;
+            for(let i = 1; i <= 8; i++) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'setting-input';
+                input.id = `subjectName_${i}`;
+                input.placeholder = `${i}e uur: ${subjectNames[i] || 'Leeg'}`;
+                input.value = subjectNames[i] || '';
+                container.appendChild(input);
             }
 
-            gefilterdeBussen.forEach(bus => {
-                const lineBadgeColor = bus.type === 'stads' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white';
-                
-                const hasCreatorIcon = bus.id && bus.id.startsWith("bus_") 
-                    ? `<span class="text-[8px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1 py-0.2 rounded font-sans font-bold uppercase">Sem</span>`
-                    : '';
-
-                // Toon alleen de prullenbak bij handmatig gecreëerde busritten
-                const activeMode = activeSourceMode[selectedHalte] || 'live';
-                const showDeleteBtn = activeMode === 'custom' && bus.id && bus.id.startsWith("bus_");
-                const deleteBtnHtml = showDeleteBtn 
-                    ? `<button onclick="verwijderBus('${bus.id}')" class="p-1.5 hover:bg-red-500/20 text-slate-500 hover:text-red-400 rounded-lg transition-all inline-flex items-center justify-center" title="Deze busrit weggooien">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                       </button>`
-                    : '';
-
-                const row = document.createElement('div');
-                row.className = "grid grid-cols-12 gap-2 px-4 py-3.5 items-center hover:bg-slate-900/50 transition-all";
-                
-                row.innerHTML = `
-                    <!-- Lijn badge -->
-                    <div class="col-span-2">
-                        <span class="${lineBadgeColor} text-xs font-black px-2.5 py-1.5 rounded-lg inline-block min-w-[38px] text-center shadow-md">
-                            ${bus.line}
-                        </span>
-                    </div>
-
-                    <!-- Bestemming -->
-                    <div class="col-span-5 md:col-span-6 flex items-center gap-2 overflow-hidden">
-                        <div class="truncate">
-                            <div class="text-xs font-bold text-slate-100 flex items-center gap-1.5 truncate">
-                                ${bus.destination} ${hasCreatorIcon}
-                            </div>
-                            <div class="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Arriva Limburg</div>
-                        </div>
-                    </div>
-
-                    <!-- Vertrektijd -->
-                    <div class="col-span-2">
-                        <div class="text-xs font-mono font-bold text-white">${bus.time}</div>
-                    </div>
-
-                    <!-- Perron / Status -->
-                    <div class="col-span-3 md:col-span-2 flex items-center justify-end gap-2 text-right">
-                        <div>
-                            <div class="text-[10px] uppercase font-bold tracking-wider ${bus.statusColor || 'text-emerald-400'}">${bus.status}</div>
-                            <div class="text-[9px] text-slate-500 font-mono font-semibold">${bus.platform || 'Spoor'}</div>
-                        </div>
-                        ${deleteBtnHtml}
-                    </div>
-                `;
-                container.appendChild(row);
-            });
-
-            lucide.createIcons();
+            document.getElementById('startLesson').value = startLesson;
+            document.getElementById('endLesson').value = endLesson;
+            document.getElementById('studentNameInput').value = studentName;
         }
 
-        // ... FILTER ACTIES ...
-        function filterTijden(type) {
-            currentFilter = type;
+        function openSettings() { document.getElementById('settingsModal').classList.add('show'); }
+        function closeSettings() { document.getElementById('settingsModal').classList.remove('show'); }
+
+        function saveSettings() {
+            startLesson = parseInt(document.getElementById('startLesson').value);
+            endLesson = parseInt(document.getElementById('endLesson').value);
+            studentName = document.getElementById('studentNameInput').value || 'Student';
+
+            for(let i = 1; i <= 8; i++) {
+                subjectNames[i] = document.getElementById(`subjectName_${i}`).value;
+            }
+            localStorage.setItem('studentName', studentName);
+            localStorage.setItem('scheduleSettings', JSON.stringify({ startLesson, endLesson, subjectNames, studentName }));
+            closeSettings();
+            updateGreeting();
+            updateSchedule();
+        }
+
+        function timeToMinutes(time) {
+            const [h, m] = time.split(':').map(Number);
+            return h * 60 + m;
+        }
+
+        function getDisplayName(item) {
+            if (item.type === 'break') return item.name;
+            return subjectNames[item.lessonNum] || item.name;
+        }
+
+        function updateSchedule() {
+            const now = new Date();
+            const dayNames = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
+            const monthNames = ['Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni', 'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December'];
             
-            ['alle', 'streek', 'stads'].forEach(t => {
-                const btn = document.getElementById(`filter-btn-${t}`);
-                if (!btn) return;
-                
-                if (t === type) {
-                    btn.className = "px-4 py-1.5 text-[10px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 rounded-full shadow-md transition-all shrink-0";
-                } else {
-                    btn.className = "px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-full border border-slate-800 transition-all shrink-0";
-                }
-            });
+            document.getElementById('currentDate').textContent = `${dayNames[now.getDay()]} ${now.getDate()} ${monthNames[now.getMonth()]}`;
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('currentTime').textContent = `${hours}:${minutes}:${seconds}`;
 
-            verversTijden();
-        }
-
-        // ... REISPLANNER LOGICA ...
-        function populatePlannerDropdowns() {
-            const fromSelect = document.getElementById('plan-from');
-            const toSelect = document.getElementById('plan-to');
-            
-            if (!fromSelect || !toSelect) return;
-
-            fromSelect.innerHTML = '';
-            toSelect.innerHTML = '';
-
-            haltes.forEach((halte, i) => {
-                const optionFrom = document.createElement('option');
-                optionFrom.value = halte.id;
-                optionFrom.textContent = halte.name;
-                fromSelect.appendChild(optionFrom);
-
-                const optionTo = document.createElement('option');
-                optionTo.value = halte.id;
-                optionTo.textContent = halte.name;
-                if (i === 1) optionTo.selected = true; // Standaard selectie
-                toSelect.appendChild(optionTo);
-            });
-        }
-
-        function planReis() {
-            const van = document.getElementById('plan-from').value;
-            const naar = document.getElementById('plan-to').value;
-
-            if (!van || !naar) {
-                showAlert("Selecteer eerst twee actieve haltes om een reis te plannen!");
+            if (now.getDay() === 0 || now.getDay() === 6) {
+                document.getElementById('currentLessonDisplay').innerHTML = '<div style="font-size: 24px; font-weight: 900;">🏠 WEEKEND MODE</div>';
+                document.getElementById('schedule').innerHTML = '';
                 return;
             }
 
-            if (van === naar) {
-                showAlert("Het vertrekpunt en de aankomstlocatie moeten verschillend zijn!");
-                return;
-            }
+            const currentMinutes = timeToMinutes(`${hours}:${minutes}`);
+            const filteredSchedule = schedule.filter(item => item.type === 'break' || (item.lessonNum >= startLesson && item.lessonNum <= endLesson));
 
-            const vanHalte = haltes.find(h => h.id === van);
-            const naarHalte = haltes.find(h => h.id === naar);
+            let currentLesson = filteredSchedule.find(item => {
+                const start = timeToMinutes(item.start);
+                const end = timeToMinutes(item.end);
+                return currentMinutes >= start && currentMinutes < end;
+            });
 
-            document.getElementById('travel-route-title').innerText = `Van ${vanHalte.name} naar ${naarHalte.name}`;
-
-            const resultsContainer = document.getElementById('planner-results');
-            resultsContainer.innerHTML = '';
-
-            const reisopties = [
-                {
-                    bus: "NCS Comfort Lijn",
-                    status: "Snelste route",
-                    duur: "12 min",
-                    vertrek: "In 7 minuten",
-                    stappen: [
-                        { tijd: "Loop", detail: "Ga naar het dichtstbijzijnde instapperon van " + vanHalte.name },
-                        { tijd: "+7m", detail: "Stap in bus richting " + naarHalte.name },
-                        { tijd: "+19m", detail: "Aankomst bij " + naarHalte.name + ". Prettige reis!" }
-                    ]
-                }
-            ];
-
-            reisopties.forEach(route => {
-                let stappenHTML = '';
-                route.stappen.forEach(stap => {
-                    stappenHTML += `
-                        <div class="flex gap-2.5 text-xs">
-                            <div class="font-mono font-bold text-amber-400 shrink-0 min-w-[38px]">${stap.tijd}</div>
-                            <div class="border-l border-slate-700 pl-3 pb-3 relative">
-                                <div class="w-1.5 h-1.5 rounded-full bg-amber-500 absolute -left-[4px] top-1"></div>
-                                <div class="text-slate-200 font-semibold text-[11px]">${stap.detail}</div>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                resultsContainer.innerHTML += `
-                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                        <div class="flex justify-between items-center mb-3">
-                            <span class="bg-amber-500 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded uppercase tracking-wider">${route.bus}</span>
-                            <div class="text-right">
-                                <div class="text-xs font-bold text-white">${route.vertrek}</div>
-                                <div class="text-[9px] text-slate-500 font-bold uppercase tracking-wider">${route.status} | Reistijd: ${route.duur}</div>
-                            </div>
-                        </div>
-                        <div class="space-y-1 mt-2">
-                            ${stappenHTML}
-                        </div>
+            const currentDisplay = document.getElementById('currentLessonDisplay');
+            if (currentLesson) {
+                const startMin = timeToMinutes(currentLesson.start);
+                const endMin = timeToMinutes(currentLesson.end);
+                const progress = ((currentMinutes - startMin) / (endMin - startMin)) * 100;
+                currentDisplay.innerHTML = `
+                    <div style="font-size: 14px; font-weight: 800; opacity: 0.8; margin-bottom: 10px;">HUIDIGE STATUS</div>
+                    <div class="current-lesson-name">${getDisplayName(currentLesson)}</div>
+                    <div style="font-size: 18px; font-weight: 700; margin-top: 5px;">${currentLesson.start} - ${currentLesson.end}</div>
+                    <div style="background: rgba(255,255,255,0.2); height: 10px; border-radius: 5px; margin-top: 25px; overflow: hidden;">
+                        <div style="width: ${progress}%; background: white; height: 100%; transition: 0.5s;"></div>
                     </div>
+                    <div style="margin-top: 15px; font-weight: 900;">NOG ${endMin - currentMinutes} MINUTEN</div>
                 `;
-            });
-
-            document.getElementById('planner-modal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('planner-modal').classList.add('hidden');
-        }
-
-        // ... MODAL EN TAB BEHEER ...
-        function openCreatorModal() {
-            // Dropdown vullen
-            const linkSelect = document.getElementById('bus-halte-link');
-            if (linkSelect) {
-                linkSelect.innerHTML = '';
-                haltes.forEach(h => {
-                    const opt = document.createElement('option');
-                    opt.value = h.id;
-                    opt.textContent = h.name;
-                    linkSelect.appendChild(opt);
-                });
-            }
-
-            document.getElementById('creator-modal').classList.remove('hidden');
-        }
-
-        function closeCreatorModal() {
-            document.getElementById('creator-modal').classList.add('hidden');
-        }
-
-        function switchStudioTab(tab) {
-            const tabBusBtn = document.getElementById('studio-tab-bus-btn');
-            const tabHalteBtn = document.getElementById('studio-tab-halte-btn');
-            const formBus = document.getElementById('form-add-bus');
-            const formHalte = document.getElementById('form-add-halte');
-
-            if (tab === 'add-bus') {
-                tabBusBtn.className = "py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all bg-amber-500 text-slate-950";
-                tabHalteBtn.className = "py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white";
-                formBus.classList.remove('hidden');
-                formHalte.classList.add('hidden');
             } else {
-                tabHalteBtn.className = "py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all bg-amber-500 text-slate-950";
-                tabBusBtn.className = "py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all text-slate-400 hover:text-white";
-                formHalte.classList.remove('hidden');
-                formBus.classList.add('hidden');
+                currentDisplay.innerHTML = `<div style="font-size: 24px; font-weight: 900;">✨ GEEN LES OP DIT MOMENT</div>`;
             }
+
+            const scheduleDiv = document.getElementById('schedule');
+            scheduleDiv.innerHTML = '';
+            
+            filteredSchedule.forEach(item => {
+                const start = timeToMinutes(item.start);
+                const end = timeToMinutes(item.end);
+                const isPast = currentMinutes >= end;
+                const isCurrent = currentMinutes >= start && currentMinutes < end;
+
+                const div = document.createElement('div');
+                div.className = 'task-item';
+                if (isPast) div.style.opacity = '0.35';
+                if (isCurrent) div.style.borderColor = 'var(--accent)';
+                
+                div.innerHTML = `
+                    <div style="flex: 1;">
+                        <div style="font-weight: 800; font-size: 15px; color: ${isCurrent ? 'var(--accent)' : 'inherit'}">${getDisplayName(item)}</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">${item.start} - ${item.end}</div>
+                    </div>
+                    ${isCurrent ? '<div style="color: var(--accent); font-weight: 900; font-size: 10px;">NU</div>' : ''}
+                `;
+                scheduleDiv.appendChild(div);
+            });
         }
 
-        function switchMobileTab(tab) {
-            const bussenBtn = document.getElementById('tab-bussen');
-            const plannerBtn = document.getElementById('tab-planner');
-            
-            if (tab === 'bussen') {
-                bussenBtn.className = "flex flex-col items-center gap-1 text-amber-500 font-semibold text-[10px]";
-                plannerBtn.className = "flex flex-col items-center gap-1 text-slate-500 text-[10px]";
-            } else {
-                plannerBtn.className = "flex flex-col items-center gap-1 text-amber-500 font-semibold text-[10px]";
-                bussenBtn.className = "flex flex-col items-center gap-1 text-slate-500 text-[10px]";
-                planReis();
-            }
-        }
+        document.addEventListener('mousemove', (e) => {
+            const cursor = document.getElementById('cursor');
+            const follower = document.getElementById('follower');
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+            follower.style.left = (e.clientX - 16) + 'px';
+            follower.style.top = (e.clientY - 16) + 'px';
+        });
+
+        document.querySelectorAll('a, button, select, input, textarea, .color-circle').forEach(el => {
+            el.addEventListener('mouseenter', () => document.getElementById('follower').classList.add('cursor-hover'));
+            el.addEventListener('mouseleave', () => document.getElementById('follower').classList.remove('cursor-hover'));
+        });
+
+        setAccent(currentAccent);
+        loadSettings();
+        updateSchedule();
+        updateGreeting();
+        renderTasks();
+        setInterval(() => { updateSchedule(); updateGreeting(); }, 1000);
     </script>
 </body>
 </html>
