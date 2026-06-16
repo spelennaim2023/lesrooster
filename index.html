@@ -1,35 +1,67 @@
-<div id="chatBox" style="height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px;">
-    </div>
-<input type="text" id="msgInput" placeholder="Typ je bericht...">
-<button onclick="verstuurBericht()">Verzenden</button>
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { margin: 0; background: #222; color: #fff; font-family: sans-serif; }
+        #scherm { height: 80vh; overflow-y: scroll; padding: 20px; }
+        .msg { padding: 10px; margin: 5px; border-radius: 10px; max-width: 70%; }
+        .admin { background: blue; margin-left: auto; text-align: right; }
+        .user { background: #444; }
+        #input-veld { position: fixed; bottom: 0; width: 100%; display: flex; }
+        input { flex: 1; padding: 20px; }
+    </style>
+</head>
+<body>
+
+<div id="scherm"></div>
+<div id="input-veld">
+    <input id="input" placeholder="Typ bericht...">
+    <button onclick="stuur()">VERSTUUR</button>
+</div>
 
 <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
     import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
-    
-    const db = getFirestore(app);
-    const chatBox = document.getElementById('chatBox');
 
-    // 1. Live berichten ophalen (Realtime)
-    const q = query(collection(db, "chats"), orderBy("timestamp", "asc"));
-    onSnapshot(q, (snapshot) => {
-        chatBox.innerHTML = ""; // Wis huidige lijst
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            chatBox.innerHTML += `<p><b>${data.van}:</b> ${data.bericht}</p>`;
-        });
-        chatBox.scrollTop = chatBox.scrollHeight; // Scroll naar beneden
+    const app = initializeApp({
+        apiKey: "AIzaSyBKfkKcLxyLIA_EbFZZlGEWsJ6DtdrCkPE",
+        projectId: "lesrooster-ncs",
+        authDomain: "lesrooster-ncs.firebaseapp.com",
+        storageBucket: "lesrooster-ncs.firebasestorage.app",
+        messagingSenderId: "505492622384",
+        appId: "1:505492622384:web:3e944061525c767f35b1f5"
     });
 
-    // 2. Berichten versturen
-    window.verstuurBericht = async () => {
-        const tekst = document.getElementById('msgInput').value;
-        const wieBenIk = document.body.dataset.role || "Gebruiker"; // 'Admin' na Alt+A invoer
-        
-        await addDoc(collection(db, "chats"), {
-            bericht: tekst,
-            van: wieBenIk,
-            timestamp: serverTimestamp()
+    const db = getFirestore(app);
+    let admin = false;
+
+    // Admin check
+    window.addEventListener("keydown", (e) => {
+        if (e.altKey && e.key === "a") {
+            if (prompt("PIN:") === "202313") { admin = true; alert("ADMIN IS LIVE"); }
+        }
+    });
+
+    // Chat logica
+    const scherm = document.getElementById('scherm');
+    onSnapshot(query(collection(db, "chats"), orderBy("tijd")), (snap) => {
+        scherm.innerHTML = "";
+        snap.forEach((doc) => {
+            let d = doc.data();
+            scherm.innerHTML += `<div class="msg ${d.wie}">${d.txt}</div>`;
         });
-        document.getElementById('msgInput').value = "";
+        scherm.scrollTop = scherm.scrollHeight;
+    });
+
+    window.stuur = async () => {
+        let val = document.getElementById('input').value;
+        await addDoc(collection(db, "chats"), {
+            txt: val,
+            wie: admin ? 'admin' : 'user',
+            tijd: serverTimestamp()
+        });
+        document.getElementById('input').value = "";
     };
 </script>
+</body>
+</html>
